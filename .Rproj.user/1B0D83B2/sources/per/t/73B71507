@@ -1,0 +1,27 @@
+{
+    "id": "73B71507",
+    "path": "~/Github/CMTF_toolbox_project/CMTF_noise_simulation.Rmd",
+    "project_path": "CMTF_noise_simulation.Rmd",
+    "type": "r_markdown",
+    "hash": "3587148454",
+    "contents": "",
+    "dirty": false,
+    "created": 1723888794474.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "121,38",
+        "scrollLine": "103",
+        "last_setup_crc32": "b2ffcc7a5f881ef"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1724006680,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1724006680776,
+    "read_only": false,
+    "read_only_alternatives": []
+}
