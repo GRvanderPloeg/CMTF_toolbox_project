@@ -1,5 +1,0 @@
-"0","nstart=8"
-"0",""
-"0","CMTF_010 = cmtf_opt(Z_010, R, initialization=""nvec"", rel_tol=1e-8, grad_tol=1e-8, max_fn=10^4, max_iter=10^3, nstart=nstart, numCores=8, allOutput=TRUE)"
-"0","CMTF_025 = cmtf_opt(Z_025, R, initialization=""nvec"", rel_tol=1e-8, grad_tol=1e-8, max_fn=10^4, max_iter=10^3, nstart=nstart, numCores=8, allOutput=TRUE)"
-"0","CMTF_035 = cmtf_opt(Z_035, R, initialization=""nvec"", rel_tol=1e-8, grad_tol=1e-8, max_fn=10^4, max_iter=10^3, nstart=nstart, numCores=8, allOutput=TRUE)"
