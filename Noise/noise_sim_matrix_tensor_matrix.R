@@ -14,29 +14,29 @@ FMS_to_simulation = function(inputFac, Fac, modes){
   normalizedInputFac = normalizeFac(inputFac, modes)
   normalizedFac = normalizeFac(Fac, modes)
 
-  # Find which components match between the model and the input
-  matchingComponents = apply(abs(cor(normalizedInputFac$Fac[[1]], normalizedFac$Fac[[1]])), 2, which.max)
-
   # Calculate FMS
   FMS_result = 1:numComponents
   for(i in 1:numComponents){
-    FMS = 1
-    ksi = 0
-    ksi_hat = 0
-    matchingComponent = matchingComponents[i]
+    proposedFMS = 1:numComponents
+    for(j in 1:numComponents){
+      FMS = 1
+      ksi = 0
+      ksi_hat = 0
 
-    for(j in 1:numModes){
-      vect1 = normalizedInputFac$Fac[[j]][,matchingComponent]
-      vect2 = normalizedFac$Fac[[j]][,i]
-      FMS = FMS * (t(vect1) %*% vect2)
-    }
+      for(k in 1:numModes){
+        vect1 = normalizedFac$Fac[[k]][,i]
+        vect2 = normalizedInputFac$Fac[[k]][,j]
+        FMS = FMS * ((t(vect2) %*% vect1))
+      }
 
-    for(j in 1:numDatasets){
-      ksi = ksi + normalizedInputFac$normsPerDataset[j,matchingComponent]
-      ksi_hat = ksi_hat + normalizedFac$normsPerDataset[j,i]
+      for(p in 1:numDatasets){
+        ksi_hat = ksi_hat + normalizedFac$normsPerDataset[p,i]
+        ksi = ksi + normalizedInputFac$normsPerDataset[p,j]
+      }
+      ksi_term = ((abs(ksi - ksi_hat)) / max(ksi, ksi_hat))
+      proposedFMS[j] = (1 - ksi_term) * abs(FMS)
     }
-    ksi_term = ((abs(ksi - ksi_hat)) / max(ksi, ksi_hat))
-    FMS_result[i] = (1 - ksi_term) * abs(FMS)
+    FMS_result[i] = max(proposedFMS)
   }
   return(min(FMS_result))
 }
