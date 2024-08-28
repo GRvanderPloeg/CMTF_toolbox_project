@@ -1,0 +1,98 @@
+---
+title: "Athina"
+output: html_document
+date: "2024-08-28"
+---
+
+```{r libraries}
+library(CMTFtoolbox)
+library(tidyverse)
+```
+
+```{r process cytokine data}
+# Import
+df = read.csv("./Data/input_deduplicated_RvdP.csv", sep=" ", header=FALSE) %>% as_tibble()
+metaData = read.csv("./Data/input_deduplicated_metadata_RvdP.csv", sep=" ", header=FALSE) %>% as_tibble()
+
+# Filter on case subjects
+mask = metaData[,6] == "case"
+df = df[mask,]
+metaData = metaData[mask,]
+colnames(metaData) = c("subject", "visit", "gender", "age", "DMFT", "case.control")
+
+# Attach pain/no-pain metadata
+meta2 = read.csv("./Data/Root_meta_data_parafac.txt", sep="\t") %>% as_tibble()
+meta2 = meta2[,2:8]
+
+subjectMeta = metaData %>% left_join(meta2, by=c("subject"="SubjectID"), relationship="many-to-many") %>% select(subject, PainS_NopainA) %>% unique()
+
+# Log transform
+pseudocount = min(df[df>0], na.rm=TRUE)
+df_log = log(df + pseudocount)
+
+# Reformat into cube
+I = length(unique(subjectMeta$subject))
+J = ncol(df)
+K = max(metaData$visit)
+X = array(0L, c(I,J,K))
+for(k in 1:K){
+  X[,,k] = cbind(df_log, metaData) %>% as_tibble() %>% filter(visit==k) %>% select(c(colnames(df_log),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
+}
+
+# Center and scale
+X_cnt = parafac4microbiome::multiwayCenter(X, mode=1)
+X_cnt_scl = parafac4microbiome::multiwayScale(X_cnt, mode=2)
+
+cytokines_df = X_cnt_scl
+cytokine_subjectMeta = subjectMeta
+cytokine_featureMeta = c("VEGF", "CRP", "GM-CSF", "IL1alpha", "IL1beta", "IL4", "IL6", "IL8", "IL10", "IL12p70", "IL17A", "IFNgamma", "MIP1alpha", "OPG", "TNFalpha", "RANKL")
+cytokine_timeMeta = 1:K
+```
+```{r process microbiome data}
+# Import
+df = read.csv("./Data/20240429_microbiome_counts.csv", sep=" ", header=FALSE) %>% as_tibble()
+taxonomy = read.csv("./Data/20240429_taxonomy.csv", sep=" ", header=FALSE) %>% as_tibble()
+sampleMeta = read.csv("./Data/20240429_microbiome_sampleMeta.csv", sep=" ", header=FALSE) %>% as_tibble()
+
+# Filter out duplicates
+mask = !(sampleMeta$V3 %in% c("A11-10 17", "A11-15 25", "A11-8 36"))
+df = df[mask,]
+sampleMeta = sampleMeta[mask,]
+
+# Select ASVs based on sparsity
+sparsityThreshold = 0.5
+
+sparsity = colSums(df==0) / nrow(df)
+featureMask = sparsity >= sparsityThreshold
+
+# CLR
+df_clr = t(apply(df+1, 1, function(x){log(x / compositions::geometricmean(x))})) %>% as_tibble()
+
+# Reduce to previously selected ASVs
+df_filtered = df_clr[,featureMask]
+taxonomy_filtered = taxonomy[featureMask,]
+
+# Center and scale
+X_cnt = sweep(df_filtered, 2, colMeans(df_filtered, na.rm=TRUE), FUN="-")
+X_cnt_scl = sweep(df_filtered, 2, apply(df_filtered, 2, function(x){sd(x,na.rm=TRUE)}), FUN="-")
+
+microbiome_df = as.matrix(X_cnt_scl)
+microbiome_subjectMeta = subjectMeta
+microbiome_featureMeta = taxonomy_filtered
+```
+
+```{r homogenize subjects}
+all.equal(cytokine_subjectMeta, microbiome_subjectMeta)
+
+homogenized_subjectMeta = cytokine_subjectMeta
+```
+```{r prepare ACMTF input data}
+datasets = list(cytokines_df, microbiome_df)
+modes = list(c(1,2,3),c(1,4))
+Z = setupCMTFdata(datasets, modes)
+```
+
+```{r check FMS}
+FMS_result = investigateFMS(datasets, modes, sharedMode=1, numFolds=12, numCores=12, jackKnife=TRUE)
+```
+

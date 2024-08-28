@@ -19,7 +19,7 @@ sampleInfo = read.csv("./Data/faeces_sampleMeta.csv", header=FALSE, sep=" ") %>%
 colnames(sampleInfo) = c("Sample", "RCID", "BMI", "BMI.group", "Days", "Gestational.age", "C.section", "AB.infant", "AB.mother", "Secretor", "Lewis", "subject")
 
 # Make subject metadata
-subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% arrange(subject)
+subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% mutate(subject=as.character(subject)) %>% arrange(subject)
 
 # Filter taxa to taxa with at least 1 non-zero value
 featureMask = colSums(df) > 0
@@ -48,7 +48,7 @@ timepoints = sampleInfo %>% arrange(Days) %>% select(Days) %>% unique() %>% pull
 
 for(k in 1:K){
   Day = timepoints[k]
-  X[,,k] = cbind(df_clr, sampleInfo) %>% as_tibble() %>% filter(Days == Day) %>% select(c(colnames(df_clr),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
+  X[,,k] = cbind(df_clr, sampleInfo) %>% as_tibble() %>% mutate(subject=as.character(subject)) %>% filter(Days == Day) %>% select(c(colnames(df_clr),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
 }
 
 # Center and scale
@@ -67,7 +67,7 @@ sampleInfo = read.csv("./Data/milk_sampleMeta.csv", header=FALSE, sep=" ") %>% a
 colnames(sampleInfo) = c("Sample", "RCID", "BMI", "BMI.group", "Days", "Gestational.age", "C.section", "AB.infant", "AB.mother", "Secretor", "Lewis", "subject")
 
 # Make subject metadata
-subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% arrange(subject)
+subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% mutate(subject=as.character(subject)) %>% arrange(subject)
 
 # Filter taxa to taxa with at least 1 non-zero value
 featureMask = colSums(df) > 0
@@ -96,7 +96,7 @@ timepoints = sampleInfo %>% arrange(Days) %>% select(Days) %>% unique() %>% pull
 
 for(k in 1:K){
   Day = timepoints[k]
-  X[,,k] = cbind(df_clr, sampleInfo) %>% as_tibble() %>% filter(Days == Day) %>% select(c(colnames(df_clr),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
+  X[,,k] = cbind(df_clr, sampleInfo) %>% as_tibble() %>% mutate(subject=as.character(subject)) %>% filter(Days == Day) %>% select(c(colnames(df_clr),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
 }
 
 # Center and scale
@@ -116,10 +116,10 @@ sampleInfo = read.csv("./Data/milkMetab_sampleMeta.csv", header=FALSE, sep=" ") 
 colnames(sampleInfo) = c("RCID", "BMI", "BMI.group", "Days", "Gestational.age", "C.section", "AB.infant", "AB.mother", "Secretor", "Lewis", "subject")
 
 # Make subject metadata
-subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% arrange(subject)
+subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% mutate(subject=as.character(subject)) %>% arrange(subject)
 
 # Remove duplicates
-drop = c(27,100,119)
+drop = c(61,81,146)
 subjectMeta = subjectMeta %>% mutate(index=1:nrow(.)) %>% filter(!index %in% drop) %>% select(-index) %>% arrange(subject)
 
 # Log transform
@@ -134,7 +134,7 @@ timepoints = sampleInfo %>% arrange(Days) %>% select(Days) %>% unique() %>% pull
 
 for(k in 1:K){
   Day = timepoints[k]
-  X[,,k] = cbind(df_log, sampleInfo) %>% as_tibble() %>% filter(Days == Day) %>% select(c(colnames(df_log),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
+  X[,,k] = cbind(df_log, sampleInfo) %>% as_tibble() %>% mutate(subject=as.character(subject)) %>% filter(Days == Day) %>% select(c(colnames(df_log),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
 }
 
 # Center and scale
@@ -159,17 +159,18 @@ homogenized_subjectMeta = faeces_subjectMeta %>% filter(subject %in% sharedSubje
 ```{r prepare ACMTF input data}
 datasets = list(faeces_homogenized, milk_homogenized, milkMetab_homogenized)
 modes = list(c(1,2,3),c(1,4,5),c(1,6,7))
-Z = setupCMTFdata(datasets, modes, normalize=TRUE)
+Z = setupCMTFdata(datasets, modes)
+```
+
+```{r check FMS}
+FMS_result = investigateFMS(datasets, modes, sharedMode=1, numFolds=12, numCores=12, jackKnife=TRUE)
 ```
 
 ```{r run ACMTF}
-model = acmtf_opt(Z, 2, nstart=100, numCores=12, allOutput=TRUE)
+model = acmtf_opt(Z, 2, nstart=100, numCores=12)
 ```
 
 ```{r plot the model}
-reinflatedBlocks = reinflateFac(model$Fac, Z, returnAsTensor=TRUE)
-multiway::sumsq(reinflatedBlocks[[1]])
-
 a = cbind(model$Fac[[1]], homogenized_subjectMeta) %>% as_tibble() %>% arrange(BMI.group, subject) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`1`,fill=as.factor(BMI.group))) + geom_bar(stat="identity") + theme(legend.position="none")
 b = cbind(model$Fac[[2]], faeces_taxonomy) %>% as_tibble() %>% arrange(V2, V3, V4, V5, V6, V7, V1) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`1`,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position="none")
 c = model$Fac[[3]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line()
