@@ -27,7 +27,7 @@ df = df[,featureMask]
 taxonomy = taxonomy[featureMask,]
 
 # Filter based on sparsity
-# TODO: filter using group information
+# TODO: filter using group information (13/11/24: no longer relevant)
 threshold = 0.75
 
 sparsity = colSums(df==0) / nrow(df)
