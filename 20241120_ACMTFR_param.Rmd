@@ -1,7 +1,7 @@
 ---
-title: "20241113_ACMTFR"
+title: "20241120_ACMTFR_param"
 output: html_document
-date: "2024-11-13"
+date: "2024-11-20"
 ---
 
 ```{r setup, include=FALSE}
@@ -11,6 +11,9 @@ library(tidyverse)
 library(ggplot2)
 library(ggpubr)
 
+library(parallel)
+library(doParallel)
+library(foreach)
 set.seed(123)
 ```
 
@@ -22,7 +25,6 @@ numTimepoints = 10
 
 # Settings
 Ysize = 1
-betaValue = 1e-3
 noiseOnX = 0.25 # Noise percentage on each X block
 noiseOnY = 0.05 # Noise percentage on Y
 w_global = 99
@@ -251,68 +253,70 @@ cbind(a_local, Y_final) %>% as_tibble() %>% ggplot(aes(x=a_local,y=Y_final)) + g
 # Convert to Tensor
 Y_final = as.tensor(Y_final)
 ```
-
-# ACMTF
 ```{r ACMTF prepare Z}
 datasets = list(X1_final, X2_final, X3_final)
 modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
 Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
 ```
 
-```{r run ACMTF}
-model_ACMTF = acmtf_opt(Z, numComponents=5, beta=c(1e-2,1e-2,1e-2), abs_tol=1e-7, rel_tol=1e-7, nstart=5, numCores=5, allOutput = TRUE)
-```
-
-# ACMTF YAS
-
-```{r ACMTF YAS prepare Z}
-datasets_YAS = list(X1_final, X2_final, X3_final, as.matrix(Y_final@data))
-modes_YAS = list(c(1,2,3), c(1,4,5), c(1,6,7), c(1,8))
-Z_YAS = CMTFtoolbox::setupCMTFdata(datasets_YAS, modes_YAS, normalize=TRUE)
-```
-
-```{r run ACMTF YAS}
-model_ACMTF_YAS = acmtf_opt(Z_YAS, numComponents=5, beta=c(1e-2,1e-2,1e-2), abs_tol=1e-7, rel_tol=1e-7, nstart=5, numCores=5, allOutput=TRUE)
-```
-
 # ACMTFR
 ```{r run ACMTFR}
-model_ACMTFR = acmtfr_opt(Z, Y_final, numComponents=5, beta=c(1e-2,1e-2,1e-2), pi=0.95, abs_tol=1e-7, rel_tol=1e-7, nstart=5, numCores=5, allOutput=TRUE)
+betas = c(1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
+pis   = c(0.2, 0.4, 0.6, 0.8, 0.9)
+
+simSettings = cbind(rep(betas, each=length(pis)), rep(pis, length(betas)))
+
+cl = parallel::makeCluster(5)
+doParallel::registerDoParallel(cl)
+models = foreach::foreach(i=1:nrow(simSettings)) %dopar% {
+  betaValue = simSettings[i,1]
+  piValue = simSettings[i,2]
+  model=CMTFtoolbox::acmtfr_opt(Z,matrix(Y_final@data),numComponents=5,initialization="nvec",beta=rep(betaValue,3),pi=piValue,abs_tol=1e-8,rel_tol=1e-8,nstart=1)
+}
+parallel::stopCluster(cl)
 ```
 
-# Compare models with simulation
+```{r plot param search}
+modelVarExpX1 = 1:length(models)
+modelVarExpX2 = 1:length(models)
+modelVarExpX3 = 1:length(models)
+modelVarExpY = 1:length(models)
+for(i in 1:length(models)){
+  modelVarExpX1[i] = mean(models[[i]]$varExp[1]*100)
+  modelVarExpX2[i] = mean(models[[i]]$varExp[2]*100)
+  modelVarExpX3[i] = mean(models[[i]]$varExp[3]*100)
+  modelVarExpY[i] = models[[i]]$varExpY
+}
 
-```{r ACMTF vs sim}
+df = cbind(simSettings, modelFun, modelVarExpX, modelVarExpY) %>% as_tibble()
+
+a=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpX1)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X1")
+b=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpX2)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X2")
+c=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpX3)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X3")
+d=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpY)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("Y")
+ggarrange(a,b,c,d)
+
+#scale_fill_gradient2(low="darkred", high="darkgreen", mid="white", midpoint=50, limits=c(0,100))
+```
+```{r investigate if the scores are found}
 scores = cbind(a_global, a_local, a_distinct1, a_distinct2, a_distinct3)
-#cor(model_ACMTF$Fac[[1]], scores)
-#cor(model_ACMTF_YAS$Fac[[1]], scores)
-#cor(model_ACMTFR$Fac[[1]], scores)
 
-selected_model_ACMTF = model_ACMTF[[2]]
-selected_model_ACMTF_YAS = model_ACMTF_YAS[[5]]
-selected_model_ACMTFR = model_ACMTFR[[1]]
+outputCor = matrix(0L, nrow=length(models), ncol=5)
+for(i in 1:length(models)){
+  outputCor[i,1] = max(abs(cor(models[[i]]$Fac[[1]], a_global)))
+  outputCor[i,2] = max(abs(cor(models[[i]]$Fac[[1]], a_local)))
+  outputCor[i,3] = max(abs(cor(models[[i]]$Fac[[1]], a_distinct1)))
+  outputCor[i,4] = max(abs(cor(models[[i]]$Fac[[1]], a_distinct2)))
+  outputCor[i,5] = max(abs(cor(models[[i]]$Fac[[1]], a_distinct3)))
+}
 
-# ACMTF
-a = cbind(selected_model_ACMTF$Fac[[1]][,1], a_global) %>% as_tibble() %>% ggplot(aes(x=a_global,y=V1)) + geom_point() + ggtitle("Common") + xlab("Real scores") + ylab("ACMTF")
-b = cbind(selected_model_ACMTF$Fac[[1]][,5], a_local) %>% as_tibble() %>% ggplot(aes(x=a_local,y=V1)) + geom_point() + ggtitle("Local") + xlab("Real scores") + ylab("ACMTF")
-c = cbind(selected_model_ACMTF$Fac[[1]][,2], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF")
-d = cbind(selected_model_ACMTF$Fac[[1]][,3], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF")
-e = cbind(selected_model_ACMTF$Fac[[1]][,4], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF")
+df = cbind(simSettings, outputCor) %>% as_tibble()
+colnames(df) = c("beta", "pi", "cor_global", "cor_local", "cor_distinct1", "cor_distinct2", "cor_distinct3")
 
-# ACMTF YAS
-f = cbind(selected_model_ACMTF_YAS$Fac[[1]][,1], a_global) %>% as_tibble() %>% ggplot(aes(x=a_global,y=V1)) + geom_point() + ggtitle("Common") + xlab("Real scores") + ylab("ACMTF-YAS")
-g = cbind(selected_model_ACMTF_YAS$Fac[[1]][,2], a_local) %>% as_tibble() %>% ggplot(aes(x=a_local,y=V1)) + geom_point() + ggtitle("Local") + xlab("Real scores") + ylab("ACMTF-YAS")
-h = cbind(selected_model_ACMTF_YAS$Fac[[1]][,3], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF-YAS")
-i = cbind(selected_model_ACMTF_YAS$Fac[[1]][,4], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF-YAS")
-j = cbind(selected_model_ACMTF_YAS$Fac[[1]][,5], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF-YAS")
-
-# ACMTFR
-k = cbind(selected_model_ACMTFR$Fac[[1]][,1], a_global) %>% as_tibble() %>% ggplot(aes(x=a_global,y=V1)) + geom_point() + ggtitle("Common") + xlab("Real scores") + ylab("ACMTF-R")
-l = cbind(selected_model_ACMTFR$Fac[[1]][,5], a_local) %>% as_tibble() %>% ggplot(aes(x=a_local,y=V1)) + geom_point() + ggtitle("Local") + xlab("Real scores") + ylab("ACMTF-R")
-m = cbind(selected_model_ACMTFR$Fac[[1]][,2], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF-R")
-n = cbind(selected_model_ACMTFR$Fac[[1]][,4], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF-R")
-o = cbind(selected_model_ACMTFR$Fac[[1]][,3], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF-R")
-
-# Combined plot
-ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,nrow=3, ncol=5)
+a = df %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=cor_global)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("a_global")
+b = df %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=cor_local)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("a_local")
+c = df %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=cor_distinct1)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("a_distinct1")
+d = df %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=cor_distinct2)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("a_distinct2")
+e = df %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=cor_distinct3)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("a_distinct3")
+ggarrange(a,b,c,d,e)
 ```
