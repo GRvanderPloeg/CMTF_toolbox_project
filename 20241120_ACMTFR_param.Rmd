@@ -288,16 +288,24 @@ for(i in 1:length(models)){
   modelVarExpY[i] = models[[i]]$varExpY
 }
 
-df = cbind(simSettings, modelFun, modelVarExpX, modelVarExpY) %>% as_tibble()
+df = cbind(simSettings, modelVarExpX1, modelVarExpX2, modelVarExpX3, modelVarExpY) %>% as_tibble()
+colnames(df) = c("beta", "pi", "modelVarExpX1", "modelVarExpX2", "modelVarExpX3", "modelVarExpY")
 
-a=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpX1)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X1")
-b=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpX2)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X2")
-c=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpX3)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X3")
-d=df %>% as_tibble() %>% ggplot(aes(x=as.factor(V1),y=as.factor(V2),fill=modelVarExpY)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("Y")
+a=df %>% as_tibble() %>% filter(modelVarExpX1 >= 0, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=modelVarExpX1)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X1")
+b=df %>% as_tibble() %>% filter(modelVarExpX2 >= 0, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=modelVarExpX2)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X2")
+c=df %>% as_tibble() %>% filter(modelVarExpX3 >= 0, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=modelVarExpX3)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X3")
+d=df %>% as_tibble() %>% filter(modelVarExpY >= 25, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=modelVarExpY)) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("Y")
 ggarrange(a,b,c,d)
+
+e=df %>% as_tibble() %>% filter(modelVarExpX1 >= 0, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=log10(modelVarExpX1))) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X1") + scale_fill_gradient2(low="red", high="green", mid="white", midpoint=1.630, limits=c(1.60,1.65))
+f=df %>% as_tibble() %>% filter(modelVarExpX2 >= 0, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=log10(modelVarExpX2))) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X2") + scale_fill_gradient2(low="red", high="green", mid="white", midpoint=1.630, limits=c(1.60,1.65))
+g=df %>% as_tibble() %>% filter(modelVarExpX3 >= 0, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=log10(modelVarExpX3))) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("X3") + scale_fill_gradient2(low="red", high="green", mid="white", midpoint=1.630, limits=c(1.60,1.65))
+h=df %>% as_tibble() %>% filter(modelVarExpY >= 25, beta < 0.5) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=log10(modelVarExpY))) + geom_tile(col="black") + xlab("beta") + ylab("pi") + ggtitle("Y") + scale_fill_gradient2(low="red", high="green", mid="white", midpoint=1.9998)
+ggarrange(e,f,g,h)
 
 #scale_fill_gradient2(low="darkred", high="darkgreen", mid="white", midpoint=50, limits=c(0,100))
 ```
+
 ```{r investigate if the scores are found}
 scores = cbind(a_global, a_local, a_distinct1, a_distinct2, a_distinct3)
 

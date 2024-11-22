@@ -277,7 +277,7 @@ model_ACMTF_YAS = acmtf_opt(Z_YAS, numComponents=5, beta=c(1e-2,1e-2,1e-2), abs_
 
 # ACMTFR
 ```{r run ACMTFR}
-model_ACMTFR = acmtfr_opt(Z, Y_final, numComponents=5, beta=c(1e-2,1e-2,1e-2), pi=0.95, abs_tol=1e-7, rel_tol=1e-7, nstart=5, numCores=5, allOutput=TRUE)
+model_ACMTFR = acmtfr_opt(Z, as.matrix(Y_final@data), numComponents=5, beta=c(1e-3,1e-3,1e-3), pi=0.9, abs_tol=1e-8, rel_tol=1e-8, nstart=5, numCores=5, allOutput=TRUE)
 ```
 
 # Compare models with simulation
@@ -309,9 +309,9 @@ j = cbind(selected_model_ACMTF_YAS$Fac[[1]][,5], a_distinct3) %>% as_tibble() %>
 # ACMTFR
 k = cbind(selected_model_ACMTFR$Fac[[1]][,1], a_global) %>% as_tibble() %>% ggplot(aes(x=a_global,y=V1)) + geom_point() + ggtitle("Common") + xlab("Real scores") + ylab("ACMTF-R")
 l = cbind(selected_model_ACMTFR$Fac[[1]][,5], a_local) %>% as_tibble() %>% ggplot(aes(x=a_local,y=V1)) + geom_point() + ggtitle("Local") + xlab("Real scores") + ylab("ACMTF-R")
-m = cbind(selected_model_ACMTFR$Fac[[1]][,2], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF-R")
-n = cbind(selected_model_ACMTFR$Fac[[1]][,4], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF-R")
-o = cbind(selected_model_ACMTFR$Fac[[1]][,3], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF-R")
+m = cbind(selected_model_ACMTFR$Fac[[1]][,4], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF-R")
+n = cbind(selected_model_ACMTFR$Fac[[1]][,3], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF-R")
+o = cbind(selected_model_ACMTFR$Fac[[1]][,2], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF-R")
 
 # Combined plot
 ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,nrow=3, ncol=5)
