@@ -22,8 +22,8 @@ numTimepoints = 15
 
 # Settings
 Ysize = 1
-noiseOnX = 0.01 # Noise percentage on each X block
-noiseOnY = 0.01 # Noise percentage on Y
+noiseOnX = 0.00 # Noise percentage on each X block
+noiseOnY = 0.00 # Noise percentage on Y
 w_global1 = 100
 w_global2 = 100
 w_local1 = 100
@@ -32,10 +32,10 @@ w_distinct1 = 100
 w_distinct2 = 100
 w_distinct3 = 100
 
-rho1 = 0.25
-rho2 = 0.25
-rho3 = 0.25
-rho4 = 0.25
+rho1 = 1
+rho2 = 0
+rho3 = 0
+rho4 = 0
 ```
 
 # Simulation
@@ -157,20 +157,24 @@ X3_noise = X3_raw + noise3
 ```
 
 ```{r center and scale x blocks}
-# Center
-X1_cnt = parafac4microbiome::multiwayCenter(X1_noise)
-X2_cnt = parafac4microbiome::multiwayCenter(X2_noise)
-X3_cnt = parafac4microbiome::multiwayCenter(X3_noise)
+# # Center
+# X1_cnt = parafac4microbiome::multiwayCenter(X1_noise)
+# X2_cnt = parafac4microbiome::multiwayCenter(X2_noise)
+# X3_cnt = parafac4microbiome::multiwayCenter(X3_noise)
+# 
+# # Scale
+# X1_cnt_scl = parafac4microbiome::multiwayScale(X1_cnt)
+# X2_cnt_scl = parafac4microbiome::multiwayScale(X2_cnt)
+# X3_cnt_scl = parafac4microbiome::multiwayScale(X3_cnt)
+# 
+# # Define final version of X
+# X1_final = X1_cnt_scl
+# X2_final = X2_cnt_scl
+# X3_final = X3_cnt_scl
 
-# Scale
-X1_cnt_scl = parafac4microbiome::multiwayScale(X1_cnt)
-X2_cnt_scl = parafac4microbiome::multiwayScale(X2_cnt)
-X3_cnt_scl = parafac4microbiome::multiwayScale(X3_cnt)
-
-# Define final version of X
-X1_final = X1_cnt_scl
-X2_final = X2_cnt_scl
-X3_final = X3_cnt_scl
+X1_final = X1_noise@data
+X2_final = X2_noise@data
+X3_final = X3_noise@data
 ```
 
 ```{r create Y}
@@ -194,7 +198,7 @@ Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
 ```
 
 ```{r run ACMTF}
-model_ACMTF = acmtf_opt(Z, numComponents=7, beta=c(1e-3,1e-3,1e-3), abs_tol=1e-5, rel_tol=1e-5, nstart=5, numCores=5, allOutput = TRUE)
+model_ACMTF = acmtf_opt(Z, numComponents=7, beta=c(1e-3,1e-3,1e-3), abs_tol=1e-9, rel_tol=1e-9, nstart=5, numCores=5, allOutput = TRUE)
 ```
 
 # ACMTF YAS
@@ -217,7 +221,7 @@ model_ACMTFR = acmtfr_opt(Z, as.matrix(Y_final@data), numComponents=7, beta=c(1e
 # Compare models with simulation
 
 ```{r ACMTF vs sim}
-scores = cbind(a_global, a_local, a_distinct1, a_distinct2, a_distinct3)
+scores = cbind(a_global1, a_global2, a_local1, a_local2, a_distinct1, a_distinct2, a_distinct3)
 #cor(model_ACMTF$Fac[[1]], scores)
 #cor(model_ACMTF_YAS$Fac[[1]], scores)
 #cor(model_ACMTFR$Fac[[1]], scores)
