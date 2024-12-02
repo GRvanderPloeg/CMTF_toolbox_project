@@ -24,13 +24,13 @@ numTimepoints = 15
 Ysize = 1
 noiseOnX = 0.00 # Noise percentage on each X block
 noiseOnY = 0.00 # Noise percentage on Y
-w_global1 = 100
-w_global2 = 100
-w_local1 = 100
-w_local2 = 100
-w_distinct1 = 100
-w_distinct2 = 100
-w_distinct3 = 100
+w_global1 = 1
+w_global2 = 1
+w_local1 = 1
+w_local2 = 1
+w_distinct1 = 1
+w_distinct2 = 1
+w_distinct3 = 1
 
 rho1 = 1
 rho2 = 0
@@ -198,7 +198,7 @@ Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
 ```
 
 ```{r run ACMTF}
-model_ACMTF = acmtf_opt(Z, numComponents=7, beta=c(1e-3,1e-3,1e-3), abs_tol=1e-9, rel_tol=1e-9, nstart=5, numCores=5, allOutput = TRUE)
+model_ACMTF = acmtf_opt(Z, numComponents=7, beta=c(1e-3,1e-3,1e-3), abs_tol=1e-10, rel_tol=1e-10, nstart=1)
 ```
 
 # ACMTF YAS
@@ -231,11 +231,13 @@ selected_model_ACMTF_YAS = model_ACMTF_YAS[[5]]
 selected_model_ACMTFR = model_ACMTFR[[1]]
 
 # ACMTF
-a = cbind(selected_model_ACMTF$Fac[[1]][,1], a_global) %>% as_tibble() %>% ggplot(aes(x=a_global,y=V1)) + geom_point() + ggtitle("Common") + xlab("Real scores") + ylab("ACMTF")
-b = cbind(selected_model_ACMTF$Fac[[1]][,5], a_local) %>% as_tibble() %>% ggplot(aes(x=a_local,y=V1)) + geom_point() + ggtitle("Local") + xlab("Real scores") + ylab("ACMTF")
-c = cbind(selected_model_ACMTF$Fac[[1]][,2], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF")
-d = cbind(selected_model_ACMTF$Fac[[1]][,3], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF")
-e = cbind(selected_model_ACMTF$Fac[[1]][,4], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF")
+a = cbind(selected_model_ACMTF$Fac[[1]][,1], a_global1) %>% as_tibble() %>% ggplot(aes(x=a_global1,y=V1)) + geom_point() + ggtitle("Common 1") + xlab("Real scores") + ylab("ACMTF")
+b = cbind(selected_model_ACMTF$Fac[[1]][,2], a_global2) %>% as_tibble() %>% ggplot(aes(x=a_global2,y=V1)) + geom_point() + ggtitle("Common 2") + xlab("Real scores") + ylab("ACMTF")
+c = cbind(selected_model_ACMTF$Fac[[1]][,4], a_local1) %>% as_tibble() %>% ggplot(aes(x=a_local1,y=V1)) + geom_point() + ggtitle("Local 1") + xlab("Real scores") + ylab("ACMTF")
+d = cbind(selected_model_ACMTF$Fac[[1]][,3], a_local2) %>% as_tibble() %>% ggplot(aes(x=a_local2,y=V1)) + geom_point() + ggtitle("Local 2") + xlab("Real scores") + ylab("ACMTF")
+e = cbind(selected_model_ACMTF$Fac[[1]][,6], a_distinct1) %>% as_tibble() %>% ggplot(aes(x=a_distinct1,y=V1)) + geom_point() + ggtitle("Distinct X1") + xlab("Real scores") + ylab("ACMTF")
+f = cbind(selected_model_ACMTF$Fac[[1]][,7], a_distinct2) %>% as_tibble() %>% ggplot(aes(x=a_distinct2,y=V1)) + geom_point() + ggtitle("Distinct X2") + xlab("Real scores") + ylab("ACMTF")
+g = cbind(selected_model_ACMTF$Fac[[1]][,5], a_distinct3) %>% as_tibble() %>% ggplot(aes(x=a_distinct3,y=V1)) + geom_point() + ggtitle("Distinct X3") + xlab("Real scores") + ylab("ACMTF")
 
 # ACMTF YAS
 f = cbind(selected_model_ACMTF_YAS$Fac[[1]][,1], a_global) %>% as_tibble() %>% ggplot(aes(x=a_global,y=V1)) + geom_point() + ggtitle("Common") + xlab("Real scores") + ylab("ACMTF-YAS")
