@@ -1,0 +1,68 @@
+---
+title: "20241203_ACMTF_validation"
+author: "G.R. van der Ploeg"
+date: "2024-12-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(rTensor)
+library(CMTFtoolbox)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+```
+
+```{r load input loadings}
+inputLoadings = readRDS("./20241203_input_loadings_Y_inside.RDS")
+```
+
+```{r load ACMTF models}
+ACMTF_models = readRDS("./20241203_ACMTF_models_Y_inside.RDS")
+ACMTF_CV_models = readRDS("./20241203_ACMTF_CV_models_Y_inside.RDS")
+ACMTF_CV_params = readRDS("./20241203_ACMTF_CV_params_Y_inside.RDS")
+ACMTF_YAS_models = readRDS("./20241203_ACMTF_YAS_models_Y_inside.RDS")
+ACMTFR_models = readRDS("./20241203_ACMTFR_models_Y_inside.RDS")
+```
+
+```{r plot varExps for ACMTF}
+ACMTF_varExps = do.call(rbind, lapply(ACMTF_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+colnames(ACMTF_varExps) = c("X1", "X2", "X3")
+
+a = ACMTF_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X1)) + geom_bar(stat="identity")
+b = ACMTF_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X2)) + geom_bar(stat="identity")
+c = ACMTF_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X3)) + geom_bar(stat="identity")
+ggarrange(a,b,c,nrow=3)
+```
+
+```{r plot varExps for ACMTF CV}
+ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
+ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
+
+a = ACMTF_CV_varExps %>% ggplot(aes(x=beta,y=X1)) + geom_point() + scale_x_log10()
+b = ACMTF_CV_varExps %>% ggplot(aes(x=beta,y=X2)) + geom_point() + scale_x_log10()
+c = ACMTF_CV_varExps %>% ggplot(aes(x=beta,y=X3)) + geom_point() + scale_x_log10()
+ggarrange(a,b,c,nrow=3)
+```
+
+```{r plot varExps for ACMTF YAS}
+ACMTF_YAS_varExps = do.call(rbind, lapply(ACMTF_YAS_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+colnames(ACMTF_YAS_varExps) = c("X1", "X2", "X3", "Y")
+
+a = ACMTF_YAS_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X1)) + geom_bar(stat="identity")
+b = ACMTF_YAS_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X2)) + geom_bar(stat="identity")
+c = ACMTF_YAS_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X3)) + geom_bar(stat="identity")
+d = ACMTF_YAS_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=Y)) + geom_bar(stat="identity")
+ggarrange(a,b,c,d,nrow=4)
+```
+
+```{r plot varExps for ACMTFR}
+ACMTFR_varExps = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+colnames(ACMTFR_varExps) = c("X1", "X2", "X3")
+
+a = ACMTFR_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X1)) + geom_bar(stat="identity")
+b = ACMTFR_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X2)) + geom_bar(stat="identity")
+c = ACMTFR_varExps %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=X3)) + geom_bar(stat="identity")
+ggarrange(a,b,c,nrow=3)
+```

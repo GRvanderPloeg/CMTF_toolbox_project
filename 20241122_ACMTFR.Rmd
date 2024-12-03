@@ -198,7 +198,7 @@ Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
 ```
 
 ```{r run ACMTF}
-model_ACMTF = acmtf_opt(Z, numComponents=7, beta=c(1e-3,1e-3,1e-3), abs_tol=1e-10, rel_tol=1e-10, nstart=1)
+model_ACMTF = acmtf_opt(Z, numComponents=7, beta=c(1e-3,1e-3,1e-3), abs_tol=1e-10, rel_tol=1e-10, nstart=100, numCores=20, allOutput=TRUE)
 ```
 
 # ACMTF YAS
@@ -210,12 +210,12 @@ Z_YAS = CMTFtoolbox::setupCMTFdata(datasets_YAS, modes_YAS, normalize=TRUE)
 ```
 
 ```{r run ACMTF YAS}
-model_ACMTF_YAS = acmtf_opt(Z_YAS, numComponents=7, beta=c(1e-3,1e-3,1e-3,1e-3), abs_tol=1e-8, rel_tol=1e-8, nstart=5, numCores=5, allOutput=TRUE)
+model_ACMTF_YAS = acmtf_opt(Z_YAS, numComponents=7, beta=c(1e-3,1e-3,1e-3,1e-3), abs_tol=1e-10, rel_tol=1e-10, nstart=100, numCores=20, allOutput=TRUE)
 ```
 
 # ACMTFR
 ```{r run ACMTFR}
-model_ACMTFR = acmtfr_opt(Z, as.matrix(Y_final@data), numComponents=7, beta=c(1e-3,1e-3,1e-3), pi=0.9, abs_tol=1e-8, rel_tol=1e-8, nstart=5, numCores=5, allOutput=TRUE)
+model_ACMTFR = acmtfr_opt(Z, as.matrix(Y_final@data), numComponents=7, beta=c(1e-3,1e-3,1e-3), pi=0.9, abs_tol=1e-10, rel_tol=1e-10, nstart=100, numCores=20, allOutput=TRUE)
 ```
 
 # Compare models with simulation
