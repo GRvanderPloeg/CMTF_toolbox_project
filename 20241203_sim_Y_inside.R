@@ -31,9 +31,9 @@ rho4 = 0
 # Simulation
 
 # initialize subject loadings
-U = array(rnorm(numSubjects*7), c(numSubjects, 7))
-U = sweep(U, 2, colMeans(U), FUN="-")
-U = CMTFtoolbox::removeTwoNormCol(U)
+r = array(rnorm(numSubjects*7), c(numSubjects, 7))
+r = sweep(r, 2, colMeans(r), FUN="-")
+U = svd(r)$u
 
 a_global1 = U[,1]
 a_global2 = U[,2]
@@ -45,9 +45,9 @@ a_distinct3 = U[,7]
 scores = U
 
 # initialize feature loadings
-U = array(rnorm(numFeatures*13), c(numFeatures, 13))
-U = sweep(U, 2, colMeans(U), FUN="-")
-U = CMTFtoolbox::removeTwoNormCol(U)
+r = array(rnorm(numFeatures*13), c(numFeatures, 13))
+r = sweep(r, 2, colMeans(r), FUN="-")
+U = svd(r)$u
 
 b_global1_X1 = U[,1]
 b_global1_X2 = U[,2]
@@ -67,9 +67,9 @@ b_distinct3 = U[,13]
 loadings = U
 
 # initialize time loadings
-U = array(rnorm(numTimepoints*13), c(numTimepoints, 13))
-U = sweep(U, 2, colMeans(U), FUN="-")
-U = CMTFtoolbox::removeTwoNormCol(U)
+r = array(rnorm(numTimepoints*13), c(numTimepoints, 13))
+r = sweep(r, 2, colMeans(r), FUN="-")
+U = svd(r)$u
 
 c_global1_X1 = U[,1]
 c_global1_X2 = U[,2]
