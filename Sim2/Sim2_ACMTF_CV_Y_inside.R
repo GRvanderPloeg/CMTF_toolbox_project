@@ -20,8 +20,8 @@ modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
 Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=FALSE)
 
 # Prepare sim settings
-betas = 1 * 10^seq(0, -10, length.out=11)
-betas = rep(betas, each=5)
+betas = c(1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1)
+betas = rep(betas, each=100)
 
 # Run model
 cl = parallel::makeCluster(64)

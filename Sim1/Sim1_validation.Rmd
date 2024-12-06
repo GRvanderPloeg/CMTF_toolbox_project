@@ -312,15 +312,45 @@ ggarrange(a,b,c,d,e,f,g,h,i, nrow=3, ncol=3)
 
 # ACMTF CV
 ```{r plot varExps for ACMTF CV}
+threshold = 99
+
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
 ACMTF_CV_varExps = ACMTF_CV_varExps * 100
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
 ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
-ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(minimum = apply(ACMTF_CV_varExps[,1:3], 1, min)) %>% mutate(correct = minimum >= 99.9) %>% select(-minimum)
+ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(minimum = apply(ACMTF_CV_varExps[,1:3], 1, min)) %>% mutate(correct = minimum >= threshold) %>% select(-minimum)
 
 a=ACMTF_CV_varExps %>% pivot_longer(-c(beta,correct)) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name, nrow=3) + geom_boxplot(outliers=FALSE) + geom_point(aes(col=as.factor(correct)), position=position_jitter(width=0.05,height=0.0)) + xlab("beta") + ylab("Variation explained (%)")
 
 b=ACMTF_CV_varExps %>% ggplot(aes(x=as.factor(beta),fill=as.factor(correct))) + geom_bar(col="black") + xlab("beta")
 
 ggarrange(a,b,nrow=2, common.legend=TRUE)
+```
+
+```{r how often are the components found}
+threshold = 0.95
+
+global1_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])) > threshold)}))
+global2_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])) > threshold)}))
+local1_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])) > threshold)}))
+local2_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])) > threshold)}))
+distinct1_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])) > threshold)}))
+distinct2_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])) > threshold)}))
+distinct3_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])) > threshold)}))
+
+componentShapes = cbind(ACMTF_CV_varExps, global1_found, global2_found, local1_found, local2_found, distinct1_found, distinct2_found, distinct3_found) %>% as_tibble()
+
+componentShapes %>% select(-X1,-X2,-X3,-correct) %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(value))) + facet_wrap(~name) + geom_bar()
+```
+
+```{r stratify the models}
+colours = hue_pal()(4)
+
+a=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numGlobalLost = 2 - (global1_found>=1) - (global2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numGlobalLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Global components lost") + ylim(c(0,100))
+
+b=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numLocalLost = 2 - (local1_found>=1) - (local2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numLocalLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Local components lost") + ylim(c(0,100))
+
+c=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numDistinctLost = 3 - distinct1_found - distinct2_found - distinct3_found) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numDistinctLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:3, values=colours) + ggtitle("Distinct components lost") + theme(legend.position="bottom") + ylim(c(0,100))
+
+ggarrange(a,b,c,nrow=3,ncol=1,common.legend=TRUE, legend.grob=get_legend(c))
 ```

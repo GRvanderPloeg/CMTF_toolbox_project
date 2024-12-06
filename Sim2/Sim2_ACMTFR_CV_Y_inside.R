@@ -3,6 +3,9 @@ library(CMTFtoolbox)
 library(tidyverse)
 library(ggplot2)
 library(ggpubr)
+library(parallel)
+library(doParallel)
+library(foreach)
 
 set.seed(123)
 
@@ -18,9 +21,9 @@ modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
 Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=FALSE)
 
 # Prepare sim settings
-betas = 1 * 10^seq(0, -10, length.out=11)
+betas = c(1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1)
 pis   = seq(0, 1, length.out=11)
-simSettings = cbind(rep(betas, each=11), rep(pis, 11))
+simSettings = cbind(rep(betas, each=11), rep(pis, 9))
 
 # Run model
 cl = parallel::makeCluster(64)
