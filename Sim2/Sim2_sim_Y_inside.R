@@ -7,9 +7,9 @@ library(ggpubr)
 set.seed(123)
 
 # Sizes of the blocks
-numSubjects = 108
-numFeatures = 100
-numTimepoints = 15
+numSubjects = 50
+numFeatures = 30
+numTimepoints = 40
 
 # Settings
 Ysize = 1

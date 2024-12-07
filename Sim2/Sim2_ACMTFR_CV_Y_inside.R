@@ -22,8 +22,9 @@ Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=FALSE)
 
 # Prepare sim settings
 betas = c(1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1)
-pis   = seq(0, 1, length.out=11)
-simSettings = cbind(rep(betas, each=11), rep(pis, 9))
+pis   = seq(0, 1, length.out=6)
+simSettings = cbind(rep(betas, each=6), rep(pis, 9))
+simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
 
 # Run model
 cl = parallel::makeCluster(64)
@@ -31,7 +32,7 @@ doParallel::registerDoParallel(cl)
 models = foreach::foreach(i=1:nrow(simSettings)) %dopar% {
   betaValue = simSettings[i,1]
   piValue = simSettings[i,2]
-  model=CMTFtoolbox::acmtfr_opt(Z,as.matrix(Y_final@data),numComponents=7,initialization="random",beta=rep(betaValue,3),pi=piValue,abs_tol=1e-10,rel_tol=1e-10,nstart=100)
+  model=CMTFtoolbox::acmtfr_opt(Z,as.matrix(Y_final@data),numComponents=7,initialization="random",beta=rep(betaValue,3),pi=piValue,abs_tol=1e-10,rel_tol=1e-10,nstart=1)
 }
 parallel::stopCluster(cl)
 
