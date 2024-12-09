@@ -14,7 +14,7 @@ numTimepoints = 40
 # Settings
 Ysize = 1
 noiseOnX = 0.35 # Noise percentage on each X block
-noiseOnY = 0.35 # Noise percentage on Y
+noiseOnY = 0.01 # Noise percentage on Y
 w_global1 = 1
 w_global2 = 1
 w_local1 = 1
