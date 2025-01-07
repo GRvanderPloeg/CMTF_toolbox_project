@@ -160,11 +160,18 @@ defaultModels = which(ACMTF_CV_params == 1e-3)
 ACMTF_models = ACMTF_CV_models[defaultModels]
 
 ACMTF_varExps = do.call(rbind, lapply(ACMTF_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTF_pro = do.call(rbind, lapply(ACMTF_models, FUN=function(x){procrustes(x$Fac[[1]], inputLoadings[[1]])$ss})) %>% as_tibble()
+
+# ACMTF_frob = do.call(rbind, lapply(ACMTF_models, FUN=function(x){norm(x$Fac[[1]] - inputLoadings[[1]], "F")})) %>% as_tibble()
+# ACMTF_trace = do.call(rbind, lapply(ACMTF_models, FUN=function(x){sum(svd(x$Fac[[1]] - inputLoadings[[1]])$d)})) %>% as_tibble()
+# ACMTF_temp = do.call(rbind, lapply(ACMTF_models, FUN=function(x){sum(svd(procrustes(x$Fac[[1]], inputLoadings[[1]])$Yrot - inputLoadings[[1]])$d)})) %>% as_tibble()
+
 ACMTF_varExps = ACMTF_varExps * 100
 colnames(ACMTF_varExps) = c("X1", "X2", "X3")
 ACMTF_varExps = ACMTF_varExps %>% mutate(index=1:nrow(.))
 
-correctModels = ACMTF_varExps %>% filter(X1 > 99, X2 > 99, X3 > 99) %>% select(index) %>% pull()
+#correctModels = ACMTF_varExps %>% filter(X1 > 99, X2 > 99, X3 > 99) %>% select(index) %>% pull()
+correctModels = which(ACMTF_pro <= 1e-2)
 ACMTF_varExps = ACMTF_varExps %>% mutate(correct = index %in% correctModels)
 
 ACMTF_models_correct = ACMTF_models[ACMTF_varExps$index %in% correctModels]
