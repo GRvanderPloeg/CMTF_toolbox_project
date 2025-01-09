@@ -321,6 +321,11 @@ ggarrange(a,b,c,d,e,f,g,h,i, nrow=3, ncol=3)
 ```{r plot varExps for ACMTF CV}
 threshold = 89.15
 
+ACMTF_CV_f = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$f})) %>% as_tibble()
+ACMTF_CV_f = ACMTF_CV_f %>% mutate(beta = ACMTF_CV_params, index=1:nrow(.))
+ACMTF_CV_f %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot()
+
+
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
 ACMTF_CV_varExps = ACMTF_CV_varExps * 100
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")

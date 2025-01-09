@@ -1,0 +1,465 @@
+---
+title: "20241203_ACMTF_validation"
+author: "G.R. van der Ploeg"
+date: "2024-12-03"
+output: html_document
+---
+
+# Preamble
+```{r setup, include=FALSE}
+library(rTensor)
+library(CMTFtoolbox)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(scales)
+```
+
+```{r load input loadings}
+inputLoadings = readRDS("./Sim2_input_loadings_Y_inside.RDS")
+```
+
+```{r load datasets}
+X1_final = readRDS("./Sim2_X1_Y_inside.RDS")
+X2_final = readRDS("./Sim2_X2_Y_inside.RDS")
+X3_final = readRDS("./Sim2_X3_Y_inside.RDS")
+Y_final = readRDS("./Sim2_Y_Y_inside.RDS")
+```
+
+# Sanity checks
+```{r plot loadings}
+a = inputLoadings[[1]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value,col=as.factor(name))) + geom_line() + xlab("Subject index") + ylab("Value") + scale_colour_manual(name="Component", labels=c("a_global1", "a_global2", "a_local1", "a_local2", "a_distinct1", "a_distinct2", "a_distinct3"), values=hue_pal()(7))
+
+b = inputLoadings[[2]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value,col=as.factor(name))) + geom_line() + xlab("Feature index") + ylab("Value") + scale_colour_manual(name="Component", labels=c("b_global1_X1", "b_global1_X2", "b_global1_X3", "b_global2_X1", "b_global2_X2", "b_global2_X3", "b_local1_X1", "b_local1_X2", "b_local2_X1", "b_local2_X2", "b_distinct1", "b_distinct2", "b_distinct3"), values=hue_pal()(13))
+
+c = inputLoadings[[3]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value,col=as.factor(name))) + geom_line() + xlab("Time index") + ylab("Value") + scale_colour_manual(name="Component", labels=c("c_global1_X1", "c_global1_X2", "c_global1_X3", "c_global2_X1", "c_global2_X2", "c_global2_X3", "c_local1_X1", "c_local1_X2", "c_local2_X1", "c_local2_X2", "c_distinct1", "c_distinct2", "c_distinct3"), values=hue_pal()(13))
+
+ggarrange(a,b,c,nrow=3)
+```
+
+```{r parafac models of the X blocks}
+set.seed(789)
+pfac1 = parafac4microbiome::parafac(X1_final, 5)
+pfac2 = parafac4microbiome::parafac(X2_final, 5)
+pfac3 = parafac4microbiome::parafac(X3_final, 3)
+
+cor(pfac1$Fac[[1]], inputLoadings[[1]])
+cor(pfac2$Fac[[1]], inputLoadings[[1]])
+cor(pfac3$Fac[[1]], inputLoadings[[1]])
+```
+
+```{r plot parafac models of the x blocks - subject loadings}
+empty = ggplot()
+
+# Block X1
+a = cbind(inputLoadings[[1]][,1], pfac1$Fac[[1]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC") + ggtitle("Global 1")
+b = cbind(inputLoadings[[1]][,2], pfac1$Fac[[1]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Global 2")
+c = cbind(inputLoadings[[1]][,3], pfac1$Fac[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 1")
+d = cbind(inputLoadings[[1]][,4], pfac1$Fac[[1]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 2")
+e = cbind(inputLoadings[[1]][,5], pfac1$Fac[[1]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 1")
+f = empty + ggtitle("Distinct 2")
+g = empty + ggtitle("Distinct 3")
+
+# Block X2
+h = cbind(inputLoadings[[1]][,1], pfac2$Fac[[1]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC")
+i = cbind(inputLoadings[[1]][,2], pfac2$Fac[[1]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+j = cbind(inputLoadings[[1]][,3], pfac2$Fac[[1]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+k = cbind(inputLoadings[[1]][,4], pfac2$Fac[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+l = empty
+m = cbind(inputLoadings[[1]][,6], pfac2$Fac[[1]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+n = empty
+
+# Block X3
+o = cbind(inputLoadings[[1]][,1], pfac3$Fac[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC")
+p = cbind(inputLoadings[[1]][,2], pfac3$Fac[[1]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+q = empty
+r = empty
+s = empty
+t = empty
+u = cbind(inputLoadings[[1]][,7], pfac3$Fac[[1]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+
+plot = ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u, nrow=3, ncol=7)
+annotate_figure(plot, top = text_grob("Subject loadings"))
+```
+
+```{r plot parafac models of the x blocks - feature loadings}
+empty = ggplot()
+
+# Block X1
+a = cbind(inputLoadings[[2]][,1], pfac1$Fac[[2]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC") + ggtitle("Global 1")
+b = cbind(inputLoadings[[2]][,4], pfac1$Fac[[2]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Global 2")
+c = cbind(inputLoadings[[2]][,7], pfac1$Fac[[2]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 1")
+d = cbind(inputLoadings[[2]][,9], pfac1$Fac[[2]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 2")
+e = cbind(inputLoadings[[2]][,11], pfac1$Fac[[2]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 1")
+f = empty + ggtitle("Distinct 2")
+g = empty + ggtitle("Distinct 3")
+
+# Block X2
+h = cbind(inputLoadings[[2]][,2], pfac2$Fac[[2]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC")
+i = cbind(inputLoadings[[2]][,5], pfac2$Fac[[2]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+j = cbind(inputLoadings[[2]][,8], pfac2$Fac[[2]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+k = cbind(inputLoadings[[2]][,10], pfac2$Fac[[2]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+l = empty
+m = cbind(inputLoadings[[2]][,12], pfac2$Fac[[2]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+n = empty
+
+# Block X3
+o = cbind(inputLoadings[[2]][,3], pfac3$Fac[[2]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC")
+p = cbind(inputLoadings[[2]][,6], pfac3$Fac[[2]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+q = empty
+r = empty
+s = empty
+t = empty
+u = cbind(inputLoadings[[2]][,13], pfac3$Fac[[2]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+
+plot = ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u, nrow=3, ncol=7)
+annotate_figure(plot, top = text_grob("Feature loadings"))
+```
+
+```{r plot parafac models of the x blocks - time loadings}
+empty = ggplot()
+
+# Block X1
+a = cbind(inputLoadings[[3]][,1], pfac1$Fac[[3]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC") + ggtitle("Global 1")
+b = cbind(inputLoadings[[3]][,4], pfac1$Fac[[3]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Global 2")
+c = cbind(inputLoadings[[3]][,7], pfac1$Fac[[3]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 1")
+d = cbind(inputLoadings[[3]][,9], pfac1$Fac[[3]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 2")
+e = cbind(inputLoadings[[3]][,11], pfac1$Fac[[3]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 1")
+f = empty + ggtitle("Distinct 2")
+g = empty + ggtitle("Distinct 3")
+
+# Block X2
+h = cbind(inputLoadings[[3]][,2], pfac2$Fac[[3]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC")
+i = cbind(inputLoadings[[3]][,5], pfac2$Fac[[3]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+j = cbind(inputLoadings[[3]][,8], pfac2$Fac[[3]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+k = cbind(inputLoadings[[3]][,10], pfac2$Fac[[3]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+l = empty
+m = cbind(inputLoadings[[3]][,12], pfac2$Fac[[3]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+n = empty
+
+# Block X3
+o = cbind(inputLoadings[[3]][,3], pfac3$Fac[[3]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("PARAFAC")
+p = cbind(inputLoadings[[3]][,6], pfac3$Fac[[3]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+q = empty
+r = empty
+s = empty
+t = empty
+u = cbind(inputLoadings[[3]][,13], pfac3$Fac[[3]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+
+plot = ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u, nrow=3, ncol=7)
+annotate_figure(plot, top = text_grob("Time loadings"))
+```
+
+# Analyze ACMTF results
+```{r load ACMTF models}
+ACMTF_CV_models = readRDS("./Sim2_ACMTF_CV_models_Y_inside.RDS")
+ACMTF_CV_params = readRDS("./Sim2_ACMTF_CV_params_Y_inside.RDS")
+ACMTF_YAS_models = readRDS("./Sim2_ACMTF_YAS_models_Y_inside.RDS")
+ACMTF_YAS_params = readRDS("./Sim2_ACMTF_YAS_params_Y_inside.RDS")
+ACMTFR_CV_models = readRDS("./Sim2_ACMTFR_CV_Y_inside.RDS")
+ACMTFR_CV_params = readRDS("./Sim2_ACMTFR_CV_params_Y_inside.RDS")
+```
+
+```{r plot varExps for ACMTF}
+threshold = 89.15
+
+defaultModels = which(ACMTF_CV_params == 1e-3)
+ACMTF_models = ACMTF_CV_models[defaultModels]
+
+ACMTF_varExps = do.call(rbind, lapply(ACMTF_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTF_varExps = ACMTF_varExps * 100
+colnames(ACMTF_varExps) = c("X1", "X2", "X3")
+ACMTF_varExps = ACMTF_varExps %>% mutate(index=1:nrow(.))
+
+correctModels = ACMTF_varExps %>% filter(X1 > threshold, X2 > threshold, X3 > threshold) %>% select(index) %>% pull()
+ACMTF_varExps = ACMTF_varExps %>% mutate(correct = index %in% correctModels)
+
+ACMTF_models_correct = ACMTF_models[ACMTF_varExps$index %in% correctModels]
+ACMTF_models_incorrect = ACMTF_models[!ACMTF_varExps$index %in% correctModels]
+
+a = ACMTF_varExps %>% ggplot(aes(x=index,y=X1,fill=as.factor(correct))) + geom_bar(stat="identity") + xlab("") + ylab("varExp X1 (%)")
+b = ACMTF_varExps %>% ggplot(aes(x=index,y=X2,fill=as.factor(correct))) + geom_bar(stat="identity") + xlab("") + ylab("varExp X2 (%)")
+c = ACMTF_varExps %>% ggplot(aes(x=index,y=X3,fill=as.factor(correct))) + geom_bar(stat="identity") + xlab("Model index") + ylab("varExp X3 (%)")
+ggarrange(a,b,c,nrow=3, common.legend=TRUE)
+```
+
+```{r inspect lambdas for ACMTF}
+ACMTF_models_correct[[1]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Lambdas (correct model)")
+
+ACMTF_models_incorrect[[1]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Lambdas (incorrect model)")
+
+#do.call(rbind, lapply(ACMTF_models, FUN=function(x){x$Fac[[8]]} %>% as_tibble() %>% mutate(index=1:nrow(.))))
+```
+
+```{r plot correct acmtf model loadings vs input - subject loadings}
+model = ACMTF_models_correct[[1]]
+cor(model$Fac[[1]], inputLoadings[[1]])
+
+# Subject loadings
+a = cbind(inputLoadings[[1]][,1], model$Fac[[1]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF") + ggtitle("Global 1")
+b = cbind(inputLoadings[[1]][,2], model$Fac[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Global 2")
+c = cbind(inputLoadings[[1]][,3], model$Fac[[1]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 1")
+d = cbind(inputLoadings[[1]][,4], model$Fac[[1]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 2")
+e = cbind(inputLoadings[[1]][,5], model$Fac[[1]][,6]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 1")
+f = cbind(inputLoadings[[1]][,6], model$Fac[[1]][,7]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 2")
+g = cbind(inputLoadings[[1]][,7], model$Fac[[1]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 3")
+
+plot = ggarrange(a,b,c,d,e,f,g, nrow=1, ncol=7)
+annotate_figure(plot, top = text_grob("Subject loadings (correct model)"))
+```
+
+```{r plot correct acmtf model loadings vs input - feature loadings}
+model = ACMTF_models_correct[[1]]
+empty = ggplot()
+
+cor(model$Fac[[2]], inputLoadings[[2]])
+cor(model$Fac[[4]], inputLoadings[[2]])
+cor(model$Fac[[6]], inputLoadings[[2]])
+
+# Block X1
+a = cbind(inputLoadings[[2]][,1], model$Fac[[2]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF") + ggtitle("Global 1")
+b = cbind(inputLoadings[[2]][,4], model$Fac[[2]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Global 2")
+c = cbind(inputLoadings[[2]][,7], model$Fac[[2]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 1")
+d = cbind(inputLoadings[[2]][,9], model$Fac[[2]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 2")
+e = cbind(inputLoadings[[2]][,11], model$Fac[[2]][,6]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 1")
+f = empty + ggtitle("Distinct 2")
+g = empty + ggtitle("Distinct 3")
+
+# Block X2
+h = cbind(inputLoadings[[2]][,2], model$Fac[[4]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF")
+i = cbind(inputLoadings[[2]][,5], model$Fac[[4]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+j = cbind(inputLoadings[[2]][,8], model$Fac[[4]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+k = cbind(inputLoadings[[2]][,10], model$Fac[[4]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+l = empty
+m = cbind(inputLoadings[[2]][,12], model$Fac[[4]][,7]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+n = empty
+
+# Block X3
+o = cbind(inputLoadings[[2]][,3], model$Fac[[6]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF")
+p = cbind(inputLoadings[[2]][,6], model$Fac[[6]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+q = empty
+r = empty
+s = empty
+t = empty
+u = cbind(inputLoadings[[2]][,13], model$Fac[[6]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+
+plot = ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u, nrow=3, ncol=7)
+annotate_figure(plot, top = text_grob("Feature loadings (correct model)"))
+```
+
+```{r plot correct acmtf model loadings vs input - time loadings}
+model = ACMTF_models_correct[[1]]
+empty = ggplot()
+
+cor(model$Fac[[3]], inputLoadings[[3]])
+cor(model$Fac[[5]], inputLoadings[[3]])
+cor(model$Fac[[7]], inputLoadings[[3]])
+
+# Block X1
+a = cbind(inputLoadings[[3]][,1], model$Fac[[3]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF") + ggtitle("Global 1")
+b = cbind(inputLoadings[[3]][,4], model$Fac[[3]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Global 2")
+c = cbind(inputLoadings[[3]][,7], model$Fac[[3]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 1")
+d = cbind(inputLoadings[[3]][,9], model$Fac[[3]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Local 2")
+e = cbind(inputLoadings[[3]][,11], model$Fac[[3]][,6]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("") + ggtitle("Distinct 1")
+f = empty + ggtitle("Distinct 2")
+g = empty + ggtitle("Distinct 3")
+
+# Block X2
+h = cbind(inputLoadings[[3]][,2], model$Fac[[5]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF")
+i = cbind(inputLoadings[[3]][,5], model$Fac[[5]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+j = cbind(inputLoadings[[3]][,8], model$Fac[[5]][,4]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+k = cbind(inputLoadings[[3]][,10], model$Fac[[5]][,3]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+l = empty
+m = cbind(inputLoadings[[3]][,12], model$Fac[[5]][,7]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+n = empty
+
+# Block X3
+o = cbind(inputLoadings[[3]][,3], model$Fac[[7]][,2]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("ACMTF")
+p = cbind(inputLoadings[[3]][,6], model$Fac[[7]][,1]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+q = empty
+r = empty
+s = empty
+t = empty
+u = cbind(inputLoadings[[3]][,13], model$Fac[[7]][,5]) %>% as_tibble() %>% ggplot(aes(x=V1,y=V2)) + geom_point() + xlab("Input") + ylab("")
+
+plot = ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u, nrow=3, ncol=7)
+annotate_figure(plot, top = text_grob("Time loadings (correct model)"))
+```
+
+```{r plot ACMTF of an incorrect model}
+model = ACMTF_models_incorrect[[1]]
+
+a = cor(model$Fac[[1]]) %>% as_tibble() %>% mutate(index=1:7) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(7,6,5,4,3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + ylab("Component number")
+
+b = model$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Lambdas (incorrect model)")
+
+c = cor(model$Fac[[1]], inputLoadings[[1]]) %>% as_tibble() %>% mutate(index=1:7) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(7,6,5,4,3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + ylab("Component number")
+
+ggarrange(a,b,c)
+
+
+# Make sense of this result
+## Component 3
+a = cbind(model$Fac[[1]][,3], inputLoadings[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("a_global1") + ylab("Component 3")
+b = cbind(model$Fac[[6]][,3], inputLoadings[[2]][,3]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("b_global1_X3") + ylab("")
+c = cbind(model$Fac[[7]][,3], inputLoadings[[3]][,3]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("c_global1_X3") + ylab("")
+
+## Component 5
+d = cbind(model$Fac[[1]][,5], inputLoadings[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("a_global1") + ylab("Component 5")
+e = cbind(model$Fac[[4]][,5], inputLoadings[[2]][,2]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("b_global1_X2") + ylab("")
+f = cbind(model$Fac[[5]][,5], inputLoadings[[3]][,2]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("c_global1_X2") + ylab("")
+
+## Component 6
+g = cbind(model$Fac[[1]][,6], inputLoadings[[1]][,1]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("a_global1") + ylab("Component 6")
+h = cbind(model$Fac[[2]][,6], inputLoadings[[2]][,1]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("b_global1_X1") + ylab("")
+i = cbind(model$Fac[[3]][,6], inputLoadings[[3]][,1]) %>% as_tibble() %>% ggplot(aes(x=V2,y=V1)) + geom_point() + xlab("c_global1_X1") + ylab("")
+
+ggarrange(a,b,c,d,e,f,g,h,i, nrow=3, ncol=3)
+```
+
+# ACMTF CV
+```{r plot varExps for ACMTF CV}
+threshold = 89.15
+
+ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTF_CV_varExps = ACMTF_CV_varExps * 100
+colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
+ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
+ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(minimum = apply(ACMTF_CV_varExps[,1:3], 1, min)) %>% mutate(correct = minimum >= threshold) %>% select(-minimum)
+
+a=ACMTF_CV_varExps %>% pivot_longer(-c(beta,correct)) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name, nrow=3) + geom_boxplot(outliers=FALSE) + geom_point(aes(col=as.factor(correct)), position=position_jitter(width=0.05,height=0.0)) + xlab("beta") + ylab("Variation explained (%)")
+
+b=ACMTF_CV_varExps %>% ggplot(aes(x=as.factor(beta),fill=as.factor(correct))) + geom_bar(col="black") + xlab("beta")
+
+ggarrange(a,b,nrow=2, common.legend=TRUE)
+```
+
+```{r how often are the components found}
+threshold = 0.95
+
+global1_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])) > threshold)}))
+global2_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])) > threshold)}))
+local1_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])) > threshold)}))
+local2_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])) > threshold)}))
+distinct1_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])) > threshold)}))
+distinct2_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])) > threshold)}))
+distinct3_found = unlist(lapply(ACMTF_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])) > threshold)}))
+
+componentShapes = cbind(ACMTF_CV_varExps, global1_found, global2_found, local1_found, local2_found, distinct1_found, distinct2_found, distinct3_found) %>% as_tibble()
+
+componentShapes %>% select(-X1,-X2,-X3,-correct) %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(value))) + facet_wrap(~name) + geom_bar()
+```
+
+```{r stratify the models}
+colours = hue_pal()(4)
+
+a=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numGlobalLost = 2 - (global1_found>=1) - (global2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numGlobalLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Global components lost") + ylim(c(0,100))
+
+b=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numLocalLost = 2 - (local1_found>=1) - (local2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numLocalLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Local components lost") + ylim(c(0,100))
+
+c=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numDistinctLost = 3 - distinct1_found - distinct2_found - distinct3_found) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numDistinctLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:3, values=colours) + ggtitle("Distinct components lost") + theme(legend.position="bottom") + ylim(c(0,100))
+
+ggarrange(a,b,c,nrow=3,ncol=1,common.legend=TRUE, legend.grob=get_legend(c))
+```
+# ACMTF YAS
+```{r plot varExps for ACMTF YAS}
+threshold = 88
+
+ACMTF_YAS_varExps = do.call(rbind, lapply(ACMTF_YAS_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTF_YAS_varExps = ACMTF_YAS_varExps * 100
+colnames(ACMTF_YAS_varExps) = c("X1", "X2", "X3", "Y")
+ACMTF_YAS_varExps = ACMTF_YAS_varExps %>% mutate(beta = ACMTF_YAS_params)
+ACMTF_YAS_varExps = ACMTF_YAS_varExps %>% mutate(minimum = apply(ACMTF_YAS_varExps[,1:4], 1, min)) %>% mutate(correct = minimum >= threshold) %>% select(-minimum)
+
+a=ACMTF_YAS_varExps %>% pivot_longer(-c(beta,correct)) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name, nrow=3) + geom_boxplot(outliers=FALSE) + geom_point(aes(col=as.factor(correct)), position=position_jitter(width=0.05,height=0.0)) + xlab("beta") + ylab("Variation explained (%)")
+
+b=ACMTF_YAS_varExps %>% ggplot(aes(x=as.factor(beta),fill=as.factor(correct))) + geom_bar(col="black") + xlab("beta")
+
+ggarrange(a,b,nrow=2, common.legend=TRUE)
+```
+```{r how often are the components found YAS}
+threshold = 0.95
+
+global1_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])) > threshold)}))
+global2_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])) > threshold)}))
+local1_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])) > threshold)}))
+local2_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])) > threshold)}))
+distinct1_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])) > threshold)}))
+distinct2_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])) > threshold)}))
+distinct3_found = unlist(lapply(ACMTF_YAS_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])) > threshold)}))
+
+componentShapes = cbind(ACMTF_YAS_varExps, global1_found, global2_found, local1_found, local2_found, distinct1_found, distinct2_found, distinct3_found) %>% as_tibble()
+
+componentShapes %>% select(-X1,-X2,-X3,-Y,-correct) %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(value))) + facet_wrap(~name) + geom_bar()
+```
+
+```{r stratify the models}
+colours = hue_pal()(4)
+
+a=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numGlobalLost = 2 - (global1_found>=1) - (global2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numGlobalLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Global components lost") + ylim(c(0,100))
+
+b=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numLocalLost = 2 - (local1_found>=1) - (local2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numLocalLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Local components lost") + ylim(c(0,100))
+
+c=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numDistinctLost = 3 - (distinct1_found>=1) - (distinct2_found>=1) - (distinct3_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numDistinctLost))) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:3, values=colours) + ggtitle("Distinct components lost") + theme(legend.position="bottom") + ylim(c(0,100))
+
+ggarrange(a,b,c,nrow=3,ncol=1,common.legend=TRUE, legend.grob=get_legend(c))
+```
+# ACMTFR
+
+```{r plot varExps for ACMTFR}
+threshold = 88
+
+ACMTFR_varExps = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTFR_varExps = ACMTFR_varExps * 100
+colnames(ACMTFR_varExps) = c("X1", "X2", "X3")
+ACMTFR_varExpsY = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){(x$varExpY)})) %>% as_tibble()
+ACMTFR_varExps = cbind(ACMTFR_varExps, ACMTFR_varExpsY) %>% as_tibble()
+ACMTFR_varExps = cbind(ACMTFR_varExps, ACMTFR_CV_params) %>% as_tibble()
+colnames(ACMTFR_varExps) = c("X1", "X2", "X3", "Y", "beta", "pi")
+ACMTFR_varExps = ACMTFR_varExps %>% mutate(minimum = apply(ACMTFR_varExps[,1:3], 1, min)) %>% mutate(correct = minimum >= threshold) %>% select(-minimum)
+
+ACMTFR_varExps %>% pivot_longer(-c(beta,pi,correct)) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_grid(rows=vars(name),cols=vars(pi)) + geom_boxplot(outliers=FALSE) + geom_point(aes(col=as.factor(correct)), position=position_jitter(width=0.05,height=0.0)) + xlab("beta") + ylab("Variation explained (%)")
+
+ACMTFR_varExps %>% ggplot(aes(x=as.factor(beta),fill=as.factor(correct))) + facet_wrap(~pi) + geom_bar(col="black") + xlab("beta")
+```
+
+```{r how often are the components found ACMTFR}
+threshold = 0.95
+
+global1_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])) > threshold)}))
+global2_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])) > threshold)}))
+local1_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])) > threshold)}))
+local2_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])) > threshold)}))
+distinct1_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])) > threshold)}))
+distinct2_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])) > threshold)}))
+distinct3_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){sum(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])) > threshold)}))
+
+componentShapes = cbind(ACMTFR_varExps, global1_found, global2_found, local1_found, local2_found, distinct1_found, distinct2_found, distinct3_found) %>% as_tibble()
+```
+
+```{r stratify the models ACMTFR}
+colours = hue_pal()(4)
+
+a=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numGlobalLost = 2 - (global1_found>=1) - (global2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numGlobalLost))) + facet_wrap(~pi) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Global components lost")
+
+b=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numLocalLost = 2 - (local1_found>=1) - (local2_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numLocalLost))) + facet_wrap(~pi) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:2, values=colours[-4]) + ggtitle("Local components lost")
+
+c=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_found + local2_found + distinct1_found + distinct2_found + distinct3_found) %>% mutate(numDistinctLost = 3 - (distinct1_found>=1) - (distinct2_found>=1) - (distinct3_found>=1)) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(numDistinctLost))) + facet_wrap(~pi) + geom_bar(col="black") + xlab("beta") + ylab("Number of models") + scale_fill_manual(name="Number of components lost", labels=0:3, values=colours) + ggtitle("Distinct components lost") + theme(legend.position="bottom")
+
+a
+b
+c
+```
+
+```{r varexp y}
+ACMTFR_varExps %>% select(-X1,-X2,-X3) %>% group_by(beta,pi) %>% summarise(m=median(Y)) %>% ggplot(aes(x=as.factor(beta),y=as.factor(pi),fill=m)) + geom_tile(col="black") + geom_text(aes(label=round(m,2)))
+```
+
+```{r coeffs acmtfr}
+coeffs = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){(t(x$rho))})) %>% as_tibble()
+colnames(coeffs) = paste0("rho", 1:7)
+
+cbind(ACMTFR_varExps, coeffs) %>% as_tibble() %>% filter(correct == TRUE,beta==1e-3) %>% select(-X1,-X2,-X3,-Y,-beta,-correct) %>% pivot_longer(-pi) %>% ggplot(aes(x=as.factor(pi),y=abs(value))) + facet_wrap(~name) + geom_boxplot(outliers=FALSE) + geom_point(position=position_jitter(width=0.05,height=0.0)) + ggtitle("Correct models")
+
+cbind(ACMTFR_varExps, coeffs) %>% as_tibble() %>% filter(correct == FALSE,beta==1e-3) %>% select(-X1,-X2,-X3,-Y,-beta,-correct) %>% pivot_longer(-pi) %>% filter(abs(value)<=1) %>% ggplot(aes(x=as.factor(pi),y=abs(value))) + facet_wrap(~name) + geom_boxplot(outliers=FALSE) + geom_point(position=position_jitter(width=0.05,height=0.0)) + ggtitle("Incorrect models")
+```
