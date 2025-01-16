@@ -191,5 +191,5 @@ saveRDS(X3_final, "./Sim2b/Sim2b_X3_Y_inside.RDS")
 allLoadings = list(scores, loadings, timeLoadings)
 saveRDS(allLoadings, "./Sim2b/Sim2b_input_loadings_Y_inside.RDS")
 
-parameters = c(w_global1, w_global2, w_local1, w_local2, w_distinct1, w_distinct2, w_distinct3, rho1, rho2, rho3, rho4, noiseOnX, Ysize)
+parameters = c(w_global1, w_global2, w_local1, w_local2, w_distinct1, w_distinct2, w_distinct3, rho1, rho2, rho3, rho4, noiseOnX, noises, Ysize)
 saveRDS(parameters, "./Sim2b/Sim2b_parameters_Y_inside.RDS")

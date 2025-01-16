@@ -492,3 +492,35 @@ c=componentShapes %>% mutate(numFound = global1_found + global2_found + local1_f
 
 ggarrange(a,b,c,nrow=3,ncol=1,common.legend=TRUE, legend.grob=get_legend(c))
 ```
+```{r check loss terms}
+model = ACMTF_CV_models[[1]]
+init = fac_to_vect(model$init)
+alpha = 1
+beta = rep(1e-3, 3)
+epsilon = 1e-8
+datasets = list(X1_final, X2_final, X3_final)
+modes = list(c(1,2,3),c(1,4,5),c(1,6,7))
+Z = setupCMTFdata(datasets, modes, normalize=FALSE)
+fg = list("fn"=function(x){return(CMTFtoolbox::acmtf_fun(x,Z,alpha,beta,epsilon))}, "gr"=function(x){return(CMTFtoolbox::acmtf_gradient(x,Z,alpha,beta,epsilon))})
+abs_tol=1e-10
+rel_tol=1e-10
+
+#model_dev = CMTFtoolbox::mize_runner(init, fg, abs_tol=abs_tol, rel_tol=rel_tol)
+model_dev = readRDS("./model_dev.RDS")
+
+# Not quite the same loss, but very similar solutions
+f_per_block = apply(model_dev$all_iterations, 2, FUN=function(x){acmtf_fun(x,Z,alpha,beta,epsilon,manual=TRUE)[[1]]})
+f_per_block = t(f_per_block) %>% as_tibble()
+
+f_norm = apply(model_dev$all_iterations, 2, FUN=function(x){acmtf_fun(x,Z,alpha,beta,epsilon,manual=TRUE)[[2]]})
+f_norm = colSums(f_norm)
+
+f_lambda = apply(model_dev$all_iterations, 2, FUN=function(x){acmtf_fun(x,Z,alpha,beta,epsilon,manual=TRUE)[[3]]})
+f_lambda = colSums(f_lambda)
+
+df = cbind(f_per_block, f_norm, f_lambda)
+colnames(df) = c("X1", "X2", "X3", "norm1", "lambda")
+f_per_block %>% mutate(iteration = 1:nrow(.)) %>% pivot_longer(-iteration) %>% ggplot(aes(x=iteration,y=value,col=as.factor(name))) + geom_line()
+
+
+```

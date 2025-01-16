@@ -185,6 +185,7 @@ componentShapes = cbind(ACMTF_CV_FMS, global1_found, global2_found, local1_found
 componentShapes %>% select(-V1,-index) %>% pivot_longer(-noise) %>% ggplot(aes(x=as.factor(noise),fill=as.factor(value))) + facet_wrap(~name,nrow=7) + geom_bar()
 
 ```
+
 ```{r comparison of two models}
 modelA = ACMTF_CV_models[[301]]$Fac # 30% noise
 modelB = ACMTF_CV_models[[601]]$Fac # 60% noise

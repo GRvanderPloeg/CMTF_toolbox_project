@@ -36,4 +36,4 @@ parallel::stopCluster(cl)
 
 # Save model
 saveRDS(models, "Sim2b_ACMTF_YAS_models_Y_inside.RDS")
-saveRDS(betas, "Sim2b_ACMTF_YAS_params_Y_inside.RDS")
+saveRDS(noises, "Sim2b_ACMTF_YAS_params_Y_inside.RDS")
