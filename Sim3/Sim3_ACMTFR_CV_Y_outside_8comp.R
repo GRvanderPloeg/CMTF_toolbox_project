@@ -32,10 +32,10 @@ doParallel::registerDoParallel(cl)
 models = foreach::foreach(i=1:nrow(simSettings)) %dopar% {
   betaValue = simSettings[i,1]
   piValue = simSettings[i,2]
-  model=CMTFtoolbox::acmtfr_opt(Z,as.matrix(Y_final@data),numComponents=7,initialization="random",beta=rep(betaValue,3),pi=piValue,abs_tol=1e-10,rel_tol=1e-10,nstart=1)
+  model=CMTFtoolbox::acmtfr_opt(Z,as.matrix(Y_final@data),numComponents=8,initialization="random",beta=rep(betaValue,3),pi=piValue,abs_tol=1e-10,rel_tol=1e-10,nstart=1)
 }
 parallel::stopCluster(cl)
 
 # Save model
-saveRDS(models, "Sim3_ACMTFR_CV_Y_outside.RDS")
-saveRDS(simSettings, "Sim3_ACMTFR_CV_params_Y_outside.RDS")
+saveRDS(models, "Sim3_ACMTFR_CV_Y_outside_8comp.RDS")
+saveRDS(simSettings, "Sim3_ACMTFR_CV_params_Y_outside_8comp.RDS")
