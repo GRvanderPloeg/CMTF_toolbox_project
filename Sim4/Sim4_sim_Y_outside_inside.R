@@ -3,17 +3,18 @@ library(CMTFtoolbox)
 library(tidyverse)
 library(ggplot2)
 library(ggpubr)
+library(MASS)
 
 set.seed(123)
 
 # Sizes of the blocks
-numSubjects = 108
-numFeatures = 100
-numTimepoints = 15
+numSubjects = 50
+numFeatures = 30
+numTimepoints = 40
 
 # Settings
 Ysize = 1
-noiseOnX = 0.01 # Noise percentage on each X block
+noiseOnX = 0.35 # Noise percentage on each X block
 noiseOnY = 0.01 # Noise percentage on Y
 w_global1 = 1
 w_global2 = 1
@@ -23,17 +24,20 @@ w_distinct1 = 1
 w_distinct2 = 1
 w_distinct3 = 1
 
-rho1 = 1
-rho2 = 0
-rho3 = 0
-rho4 = 0
+rho1 = 1 # Y is partially inside CLD
+rho2 = 1
+rho3 = 1
+rho4 = 1
+mix1 = 0.5 # part of Y that is inside the CLD
+mix2 = 0.5 # part of Y that is outside the CLD
 
 # Simulation
 
 # initialize subject loadings
 r = array(rnorm(numSubjects*7), c(numSubjects, 7))
-r = sweep(r, 2, colMeans(r), FUN="-")
-U = svd(r)$u
+U = CMTFtoolbox::removeTwoNormCol(r)
+# r = sweep(r, 2, colMeans(r), FUN="-")
+# U = svd(r)$u
 
 a_global1 = U[,1]
 a_global2 = U[,2]
@@ -46,8 +50,9 @@ scores = U
 
 # initialize feature loadings
 r = array(rnorm(numFeatures*13), c(numFeatures, 13))
-r = sweep(r, 2, colMeans(r), FUN="-")
-U = svd(r)$u
+U = CMTFtoolbox::removeTwoNormCol(r)
+# r = sweep(r, 2, colMeans(r), FUN="-")
+# U = svd(r)$u
 
 b_global1_X1 = U[,1]
 b_global1_X2 = U[,2]
@@ -68,8 +73,9 @@ loadings = U
 
 # initialize time loadings
 r = array(rnorm(numTimepoints*13), c(numTimepoints, 13))
-r = sweep(r, 2, colMeans(r), FUN="-")
-U = svd(r)$u
+U = CMTFtoolbox::removeTwoNormCol(r)
+# r = sweep(r, 2, colMeans(r), FUN="-")
+# U = svd(r)$u
 
 c_global1_X1 = U[,1]
 c_global1_X2 = U[,2]
@@ -163,7 +169,13 @@ X1_final = X1_noise@data
 X2_final = X2_noise@data
 X3_final = X3_noise@data
 
-Y = rho1 * a_global1 + rho2 * a_global2 + rho3 * a_local1 + rho4 * a_local2
+# Generate Y
+Y_inside = rho1 * a_global1 + rho2 * a_global2 + rho3 * a_local1 + rho4 * a_local2
+y_basis = Null(scores)
+Y_outside = y_basis[,1]
+
+Y = mix1 * Y_inside + mix2 * Y_outside
+
 noiseY = rnorm(numSubjects)
 noiseY = noiseY - mean(noiseY)
 noiseY = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
@@ -171,17 +183,20 @@ Ynoise = Y + noiseY
 Ynorm = Ynoise / norm(Ynoise, "2")
 Y_final = Ysize * Ynorm
 
+# Embed Y in X3
+X3_final[,1,1] = Y_final
+
 # Convert to Tensor
 Y_final = as.tensor(Y_final)
 
 # Save sim
-saveRDS(X1_final, "20241203_X1_Y_inside.RDS")
-saveRDS(X2_final, "20241203_X2_Y_inside.RDS")
-saveRDS(X3_final, "20241203_X3_Y_inside.RDS")
-saveRDS(Y_final, "20241203_Y_Y_inside.RDS")
+saveRDS(X1_final, "./Sim4/Sim4_X1_Y_outside_inside.RDS")
+saveRDS(X2_final, "./Sim4/Sim4_X2_Y_outside_inside.RDS")
+saveRDS(X3_final, "./Sim4/Sim4_X3_Y_outside_inside.RDS")
+saveRDS(Y_final, "./Sim4/Sim4_Y_Y_outside_inside.RDS")
 
 allLoadings = list(scores, loadings, timeLoadings)
-saveRDS(allLoadings, "20241203_input_loadings_Y_inside.RDS")
+saveRDS(allLoadings, "./Sim4/Sim4_input_loadings_Y_outside_inside.RDS")
 
-parameters = c(w_global1, w_global2, w_local1, w_local2, w_distinct1, w_distinct2, w_distinct3, rho1, rho2, rho3, rho4, noiseOnX, noiseOnY, Ysize)
-saveRDS(parameters, "20241203_parameters_Y_inside.RDS")
+parameters = c(w_global1, w_global2, w_local1, w_local2, w_distinct1, w_distinct2, w_distinct3, noiseOnX, noiseOnY, Ysize)
+saveRDS(parameters, "./Sim4/Sim4_parameters_Y_outside_inside.RDS")

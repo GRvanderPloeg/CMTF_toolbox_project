@@ -1,0 +1,477 @@
+---
+title: "20241203_ACMTF_validation"
+author: "G.R. van der Ploeg"
+date: "2024-12-03"
+output: html_document
+---
+
+# Preamble
+```{r setup, include=FALSE}
+library(rTensor)
+library(CMTFtoolbox)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(scales)
+library(clue)
+```
+
+```{r define FMS}
+
+calculateFMS <- function(modelFac, realFac, numComponents) {
+  
+  # Project modelFac onto realFac to make sure components are not split
+  # modelFac = modelFac %*% pracma::pinv(t(modelFac) %*% modelFac) %*% t(modelFac) %*% realFac
+  
+  # Create a similarity matrix for the pairwise comparison
+  similarity_matrix <- matrix(0, nrow = ncol(modelFac), ncol = ncol(modelFac))
+  
+  # Compute pairwise cosine similarity across all modes
+  for (k in 1:ncol(modelFac)) {
+    for (l in 1:ncol(realFac)) {
+      vect1 <- as.matrix(modelFac[, k])
+      vect2 <- as.matrix(realFac[, l])
+      
+      # Cosine similarity
+      similarity_matrix[k, l] <- abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
+    }
+  }
+  
+  # Use Hungarian algorithm to find the best matching
+  assignment <- clue::solve_LSAP(similarity_matrix, maximum = TRUE)
+  
+  # Permute columns in the model to fit the input components
+  # modelFac_perm <- modelFac[,assignment]
+  
+  # Calculate FMS based on the best matching
+  FMS <- sum(similarity_matrix[cbind(seq_along(assignment), assignment)])
+  
+  # Average over the number of components
+  FMS <- FMS / numComponents
+  return(FMS)
+}
+
+```
+
+```{r lambda similarity function}
+
+
+lambda_similarity = function(lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)){
+  lambda_hat = abs(lambda_hat)
+  numComponents = ncol(lambda_true)
+  
+  similarity_matrix = matrix(NA, nrow=numComponents, ncol=numComponents)
+  for(i in 1:numComponents){
+    for(j in 1:numComponents){
+      real = lambda_true[,i]
+      hat = lambda_hat[,j]
+      similarity_matrix[i,j] = sum((real - hat)^2)
+    }
+  }
+  
+  mapping = clue::solve_LSAP(similarity_matrix)
+  lambda_hat_perm = lambda_hat[,mapping]
+  SSR = sum((lambda_true - lambda_hat_perm)^2)
+  return(SSR)
+}
+```
+
+```{r load input loadings}
+inputLoadings = readRDS("./Sim3_input_loadings_Y_outside.RDS")
+
+# Reorganize into Fac object
+inputLoadingsFac = inputLoadings
+inputLoadingsFac[[2]] = inputLoadings[[2]][,c(1,4,7,9,11)]
+inputLoadingsFac[[3]] = inputLoadings[[3]][,c(1,4,7,9,11)]
+inputLoadingsFac[[4]] = inputLoadings[[2]][,c(2,5,8,10,12)]
+inputLoadingsFac[[5]] = inputLoadings[[3]][,c(2,5,8,10,12)]
+inputLoadingsFac[[6]] = inputLoadings[[2]][,c(3,6,13)]
+inputLoadingsFac[[7]] = inputLoadings[[3]][,c(3,6,13)]
+
+```
+
+```{r load datasets}
+X1_final = readRDS("./Sim3_X1_Y_outside.RDS")
+X2_final = readRDS("./Sim3_X2_Y_outside.RDS")
+X3_final = readRDS("./Sim3_X3_Y_outside.RDS")
+Y_final = readRDS("./Sim3_Y_Y_outside.RDS")
+```
+
+# Analyze ACMTF results 7 components
+```{r load ACMTF models}
+ACMTF_YAS_models = readRDS("./Sim3_ACMTF_YAS_models_Y_outside.RDS")
+ACMTF_YAS_params = readRDS("./Sim3_ACMTF_YAS_params_Y_outside.RDS")
+ACMTFR_CV_models = readRDS("./Sim3_ACMTFR_CV_Y_outside.RDS")
+ACMTFR_CV_params = readRDS("./Sim3_ACMTFR_CV_params_Y_outside.RDS")
+```
+
+# ACMTF YAS
+
+```{r plot varExps for ACMTF YAS}
+# Select only beta = 1e-3 models
+mask = ACMTF_YAS_params == 1e-3
+models = ACMTF_YAS_models[mask]
+
+lambda_true_YAS = matrix(c(0.42,0.42,0.48,0,0.42,0.42,0.48,0,0.42,0.42,0,0,0.42,0.42,0,0,0.42,0,0,0,0,0.42,0,0,0,0,0.55,0), nrow=4, ncol=7)
+
+ACMTF_YAS_varExps = do.call(rbind, lapply(models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTF_YAS_varExps = ACMTF_YAS_varExps * 100
+colnames(ACMTF_YAS_varExps) = c("X1", "X2", "X3", "Y")
+ACMTF_YAS_varExps = ACMTF_YAS_varExps
+
+ACMTF_YAS_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTF_YAS_f = ACMTF_YAS_f %>% as_tibble() %>% mutate(index=1:length(beta))
+
+ACMTF_YAS_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTF_YAS_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTF_YAS_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTF_YAS_FMS = cbind(ACMTF_YAS_FMS1, ACMTF_YAS_FMS2, ACMTF_YAS_FMS3, ACMTF_YAS_FMS4, ACMTF_YAS_FMS5, ACMTF_YAS_FMS6, ACMTF_YAS_FMS7)
+colnames(ACMTF_YAS_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTF_YAS_FMS = ACMTF_YAS_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, index=1:nrow(.))
+
+ACMTF_YAS_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[9]], lambda_true=lambda_true_YAS)}))
+ACMTF_YAS_lambda_similarity = ACMTF_YAS_lambda_similarity %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+# Plots
+ACMTF_YAS_varExps %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+
+ACMTF_YAS_FMS %>% mutate(lambda_similarity = ACMTF_YAS_lambda_similarity$V1) %>% select(X1,X2,X3,lambda_similarity) %>% pivot_longer(-lambda_similarity)  %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_wrap(~name) + geom_point() + xlab("Lambda similarity") + ylab("FMS") + scale_x_log10()
+
+# # OLD
+# ACMTF_YAS_f %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot() + xlab("Beta") + ylab("Loss value")
+# ACMTF_YAS_FMS %>% select(X1, X2, X3, beta) %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name) + geom_boxplot() + xlab("Beta") + ylab("FMS")
+# 
+# ACMTF_YAS_FMS %>% mutate(lambda_similarity = ACMTF_YAS_lambda_similarity$V1) %>% select(X1,X2,X3, beta, lambda_similarity) %>% pivot_longer(-c(beta,lambda_similarity)) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_grid(vars(name),vars(beta)) + geom_point() + scale_x_log10() + xlab("Lambda similarity") + ylab("FMS")
+# 
+# ACMTF_YAS_FMS %>% mutate(lambda_similarity = ACMTF_YAS_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity <= 0.15) & (X1 >= 0.9) & (X2 >= 0.9) & (X3 >= 0.9)) %>% ggplot(aes(x=as.factor(beta),fill=correct)) + geom_bar(col="black") + xlab("Beta") + ylab("Number of models")
+# 
+# ACMTF_YAS_varExps %>% as_tibble() %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name) + geom_boxplot()
+# 
+# ACMTF_YAS_varExps %>% as_tibble() %>% pivot_longer(-beta) %>% filter(beta==1e-3) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+```
+
+```{r plot some lambda matrices}
+a=models[[16]]$Fac[[9]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(4,3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("Y","X3", "X2", "X1")) + theme(legend.position="none")
+```
+
+```{r how often are the components found YAS}
+threshold = 0.95
+colours = hue_pal()(4)
+
+global1 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+
+componentShapes = cbind(ACMTF_YAS_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+componentShapes %>% as_tibble() %>% select(global1,global2,local1,local2,distinct1,distinct2,distinct3,index) %>% pivot_longer(-index) %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=name,y=value)) + geom_boxplot() + xlab("Component") + ylab("Max correlation")
+```
+
+# ACMTFR beta=1e-3, pi=1
+```{r plot varExps for ACMTFR}
+# Select only beta = 1e-3 and pi = 1 models
+mask = (ACMTFR_CV_params[,1] == 1e-3) & (ACMTFR_CV_params[,2] == 1.0)
+models = ACMTFR_CV_models[mask]
+
+ACMTFR_CV_varExpX = do.call(rbind, lapply(models, FUN=function(x){(x$varExp)}))
+ACMTFR_CV_varExpY = do.call(rbind, lapply(models, FUN=function(x){x$varExpY}))
+ACMTFR_CV_varExps = cbind(ACMTFR_CV_varExpX, ACMTFR_CV_varExpY)
+colnames(ACMTFR_CV_varExps) = c("X1", "X2", "X3", "Y")
+ACMTFR_CV_varExps = ACMTFR_CV_varExps %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTFR_CV_f = ACMTFR_CV_f %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTFR_CV_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTFR_CV_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTFR_FMS = cbind(ACMTFR_CV_FMS1, ACMTFR_CV_FMS2, ACMTFR_CV_FMS3, ACMTFR_CV_FMS4, ACMTFR_CV_FMS5, ACMTFR_CV_FMS6, ACMTFR_CV_FMS7)
+colnames(ACMTFR_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTFR_FMS = ACMTFR_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, index=1:nrow(.))
+
+ACMTFR_CV_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
+ACMTFR_CV_lambda_similarity = ACMTFR_CV_lambda_similarity %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+# Plots
+ACMTFR_CV_varExps %>% pivot_longer(-index) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+
+ACMTFR_FMS %>% mutate(lambda_similarity=ACMTFR_CV_lambda_similarity$V1) %>% select(X1,X2,X3,lambda_similarity) %>% pivot_longer(-lambda_similarity) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_wrap(~name) + geom_point() + xlab("Lambda similarity") + ylab("FMS") + scale_x_log10()
+```
+
+```{r how often are the components found}
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim3_Y_Y_outside.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+global1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
+
+componentShapes = cbind(ACMTF_YAS_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+componentShapes %>% as_tibble() %>% select(global1,global2,local1,local2,distinct1,distinct2,distinct3,index) %>% pivot_longer(-index) %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=name,y=value)) + geom_boxplot() + xlab("Component") + ylab("Max correlation")
+```
+
+# ACMTFR beta=1e-3 pi=0.8
+```{r plot varExps for ACMTFR}
+# Select only beta = 1e-3 and pi = 0.8 models
+mask = (ACMTFR_CV_params[,1] == 1e-3) & (ACMTFR_CV_params[,2] == 0.8)
+models = ACMTFR_CV_models[mask]
+
+ACMTFR_CV_varExpX = do.call(rbind, lapply(models, FUN=function(x){(x$varExp)}))
+ACMTFR_CV_varExpY = do.call(rbind, lapply(models, FUN=function(x){x$varExpY}))
+ACMTFR_CV_varExps = cbind(ACMTFR_CV_varExpX, ACMTFR_CV_varExpY)
+colnames(ACMTFR_CV_varExps) = c("X1", "X2", "X3", "Y")
+ACMTFR_CV_varExps = ACMTFR_CV_varExps %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTFR_CV_f = ACMTFR_CV_f %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTFR_CV_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTFR_CV_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTFR_FMS = cbind(ACMTFR_CV_FMS1, ACMTFR_CV_FMS2, ACMTFR_CV_FMS3, ACMTFR_CV_FMS4, ACMTFR_CV_FMS5, ACMTFR_CV_FMS6, ACMTFR_CV_FMS7)
+colnames(ACMTFR_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTFR_FMS = ACMTFR_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, index=1:nrow(.))
+
+ACMTFR_CV_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
+ACMTFR_CV_lambda_similarity = ACMTFR_CV_lambda_similarity %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+# Plots
+ACMTFR_CV_varExps %>% pivot_longer(-index) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+
+ACMTFR_FMS %>% mutate(lambda_similarity=ACMTFR_CV_lambda_similarity$V1) %>% select(X1,X2,X3,lambda_similarity) %>% pivot_longer(-lambda_similarity) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_wrap(~name) + geom_point() + xlab("Lambda similarity") + ylab("FMS") + scale_x_log10()
+```
+
+```{r how often are the components found}
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim3_Y_Y_outside.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+global1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
+
+componentShapes = cbind(ACMTF_YAS_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+componentShapes %>% as_tibble() %>% select(global1,global2,local1,local2,distinct1,distinct2,distinct3,index) %>% pivot_longer(-index) %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=name,y=value)) + geom_boxplot() + xlab("Component") + ylab("Max correlation")
+```
+
+# Analyze ACMTF results 8 components
+
+```{r load ACMTF models}
+ACMTF_YAS_models = readRDS("./Sim3_ACMTF_YAS_models_Y_outside_8comp.RDS")
+ACMTF_YAS_params = readRDS("./Sim3_ACMTF_YAS_params_Y_outside_8comp.RDS")
+ACMTFR_CV_models = readRDS("./Sim3_ACMTFR_CV_Y_outside_8comp.RDS")
+ACMTFR_CV_params = readRDS("./Sim3_ACMTFR_CV_params_Y_outside_8comp.RDS")
+```
+
+# ACMTF YAS
+
+```{r plot varExps for ACMTF YAS}
+# Select only beta = 1e-3 models
+mask = ACMTF_YAS_params == 1e-3
+models = ACMTF_YAS_models[mask]
+
+lambda_true_YAS = matrix(c(0.42,0.42,0.48,0,0.42,0.42,0.48,0,0.42,0.42,0,0,0.42,0.42,0,0,0.42,0,0,0,0,0.42,0,0,0,0,0.55,0,0,0,0.55,1), nrow=4, ncol=8)
+
+ACMTF_YAS_varExps = do.call(rbind, lapply(models, FUN=function(x){(x$varExp)})) %>% as_tibble()
+ACMTF_YAS_varExps = ACMTF_YAS_varExps
+colnames(ACMTF_YAS_varExps) = c("X1", "X2", "X3", "Y")
+ACMTF_YAS_varExps = ACMTF_YAS_varExps
+
+ACMTF_YAS_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTF_YAS_f = ACMTF_YAS_f %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTF_YAS_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTF_YAS_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTF_YAS_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTF_YAS_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTF_YAS_FMS = cbind(ACMTF_YAS_FMS1, ACMTF_YAS_FMS2, ACMTF_YAS_FMS3, ACMTF_YAS_FMS4, ACMTF_YAS_FMS5, ACMTF_YAS_FMS6, ACMTF_YAS_FMS7)
+colnames(ACMTF_YAS_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTF_YAS_FMS = ACMTF_YAS_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, index=1:nrow(.))
+
+ACMTF_YAS_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[9]], lambda_true=lambda_true_YAS)}))
+ACMTF_YAS_lambda_similarity = ACMTF_YAS_lambda_similarity %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+# Plots
+ACMTF_YAS_varExps %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+
+ACMTF_YAS_FMS %>% mutate(lambda_similarity = ACMTF_YAS_lambda_similarity$V1) %>% select(X1,X2,X3,lambda_similarity) %>% pivot_longer(-lambda_similarity)  %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_wrap(~name) + geom_point() + xlab("Lambda similarity") + ylab("FMS") + scale_x_log10()
+```
+
+```{r plot some lambda matrices}
+a=models[[16]]$Fac[[9]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(4,3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("Y","X3", "X2", "X1")) + theme(legend.position="none")
+```
+
+```{r how often are the components found YAS}
+threshold = 0.95
+colours = hue_pal()(4)
+
+global1 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTF_YAS_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+
+componentShapes = cbind(ACMTF_YAS_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+componentShapes %>% as_tibble() %>% select(global1,global2,local1,local2,distinct1,distinct2,distinct3,index) %>% pivot_longer(-index) %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=name,y=value)) + geom_boxplot() + xlab("Component") + ylab("Max correlation")
+```
+
+# ACMTFR beta=1e-3, pi=1
+```{r plot varExps for ACMTFR}
+# Select only beta = 1e-3 and pi = 1 models
+mask = (ACMTFR_CV_params[,1] == 1e-3) & (ACMTFR_CV_params[,2] == 1.0)
+models = ACMTFR_CV_models[mask]
+
+ACMTFR_CV_varExpX = do.call(rbind, lapply(models, FUN=function(x){(x$varExp)}))
+ACMTFR_CV_varExpY = do.call(rbind, lapply(models, FUN=function(x){x$varExpY}))
+ACMTFR_CV_varExps = cbind(ACMTFR_CV_varExpX, ACMTFR_CV_varExpY)
+colnames(ACMTFR_CV_varExps) = c("X1", "X2", "X3", "Y")
+ACMTFR_CV_varExps = ACMTFR_CV_varExps %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTFR_CV_f = ACMTFR_CV_f %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTFR_CV_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTFR_CV_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTFR_FMS = cbind(ACMTFR_CV_FMS1, ACMTFR_CV_FMS2, ACMTFR_CV_FMS3, ACMTFR_CV_FMS4, ACMTFR_CV_FMS5, ACMTFR_CV_FMS6, ACMTFR_CV_FMS7)
+colnames(ACMTFR_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTFR_FMS = ACMTFR_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, index=1:nrow(.))
+
+ACMTFR_CV_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
+ACMTFR_CV_lambda_similarity = ACMTFR_CV_lambda_similarity %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+# Plots
+ACMTFR_CV_varExps %>% pivot_longer(-index) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+
+ACMTFR_FMS %>% mutate(lambda_similarity=ACMTFR_CV_lambda_similarity$V1) %>% select(X1,X2,X3,lambda_similarity) %>% pivot_longer(-lambda_similarity) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_wrap(~name) + geom_point() + xlab("Lambda similarity") + ylab("FMS") + scale_x_log10()
+```
+
+```{r how often are the components found}
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim3_Y_Y_outside.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+global1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
+
+componentShapes = cbind(ACMTF_YAS_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+componentShapes %>% as_tibble() %>% select(global1,global2,local1,local2,distinct1,distinct2,distinct3,index) %>% pivot_longer(-index) %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=name,y=value)) + geom_boxplot() + xlab("Component") + ylab("Max correlation")
+```
+
+# ACMTFR beta=1e-3 pi=0.8
+```{r plot varExps for ACMTFR}
+# Select only beta = 1e-3 and pi = 0.8 models
+mask = (ACMTFR_CV_params[,1] == 1e-3) & (ACMTFR_CV_params[,2] == 0.8)
+models = ACMTFR_CV_models[mask]
+
+ACMTFR_CV_varExpX = do.call(rbind, lapply(models, FUN=function(x){(x$varExp)}))
+ACMTFR_CV_varExpY = do.call(rbind, lapply(models, FUN=function(x){x$varExpY}))
+ACMTFR_CV_varExps = cbind(ACMTFR_CV_varExpX, ACMTFR_CV_varExpY)
+colnames(ACMTFR_CV_varExps) = c("X1", "X2", "X3", "Y")
+ACMTFR_CV_varExps = ACMTFR_CV_varExps %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTFR_CV_f = ACMTFR_CV_f %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+ACMTFR_CV_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTFR_CV_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTFR_CV_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTFR_CV_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTFR_FMS = cbind(ACMTFR_CV_FMS1, ACMTFR_CV_FMS2, ACMTFR_CV_FMS3, ACMTFR_CV_FMS4, ACMTFR_CV_FMS5, ACMTFR_CV_FMS6, ACMTFR_CV_FMS7)
+colnames(ACMTFR_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTFR_FMS = ACMTFR_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, index=1:nrow(.))
+
+ACMTFR_CV_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
+ACMTFR_CV_lambda_similarity = ACMTFR_CV_lambda_similarity %>% as_tibble() %>% mutate(index=1:nrow(.))
+
+# Plots
+ACMTFR_CV_varExps %>% pivot_longer(-index) %>% ggplot(aes(x=as.factor(name),y=value)) + geom_boxplot() + xlab("Block") + ylab("Variance explained (%)")
+
+ACMTFR_FMS %>% mutate(lambda_similarity=ACMTFR_CV_lambda_similarity$V1) %>% select(X1,X2,X3,lambda_similarity) %>% pivot_longer(-lambda_similarity) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_wrap(~name) + geom_point() + xlab("Lambda similarity") + ylab("FMS") + scale_x_log10()
+```
+
+```{r how often are the components found}
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim3_Y_Y_outside.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+global1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
+
+componentShapes = cbind(ACMTF_YAS_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+componentShapes %>% as_tibble() %>% select(global1,global2,local1,local2,distinct1,distinct2,distinct3,index) %>% pivot_longer(-index) %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=name,y=value)) + geom_boxplot() + xlab("Component") + ylab("Max correlation")
+```
