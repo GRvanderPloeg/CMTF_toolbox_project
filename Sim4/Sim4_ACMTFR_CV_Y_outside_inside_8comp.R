@@ -22,8 +22,8 @@ Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=FALSE)
 
 # Prepare sim settings
 betas = c(1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1)
-pis   = seq(0, 1, length.out=6)
-simSettings = cbind(rep(betas, each=6), rep(pis, 9))
+pis   = c(0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1)
+simSettings = cbind(rep(betas, each=8), rep(pis, 9))
 simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
 
 # Run model

@@ -13,7 +13,7 @@ numFeatures = 30
 numTimepoints = 40
 
 # Settings
-Ysize = 1
+Ysize = 0.03
 noiseOnX = 0.35 # Noise percentage on each X block
 noiseOnY = 0.01 # Noise percentage on Y
 w_global1 = 1
@@ -28,8 +28,8 @@ rho1 = 1 # Y is partially inside CLD
 rho2 = 1
 rho3 = 1
 rho4 = 1
-mix1 = 0.5 # part of Y that is inside the CLD
-mix2 = 0.5 # part of Y that is outside the CLD
+mix1 = 1 # part of Y that is inside the CLD
+mix2 = 1 # part of Y that is outside the CLD
 
 # Simulation
 
@@ -120,6 +120,30 @@ X3_term3 = parafac4microbiome::reinflateTensor(a_distinct3, b_distinct3, c_disti
 
 X3_raw = w_global1 * X3_term1 + w_global2 * X3_term2 + w_distinct3 * X3_term3
 
+# Generate Y
+Y_inside = rho1 * a_global1 + rho2 * a_global2 + rho3 * a_local1 + rho4 * a_local2
+y_basis = Null(scores)
+Y_outside = y_basis[,1]
+
+noiseY = rnorm(numSubjects)
+noiseY = noiseY - mean(noiseY)
+noiseY = (norm(Y_outside, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
+Y_outside_noise = Y_outside + noiseY
+Y_outside_norm = Y_outside_noise / norm(Y_outside_noise, "2")
+Y_outside_size = Ysize * Y_outside_norm
+
+noiseY = rnorm(numSubjects)
+noiseY = noiseY - mean(noiseY)
+noiseY = (norm(Y_outside, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
+Y_inside_noise = Y_inside + noiseY
+Y_inside_norm = Y_inside_noise / norm(Y_inside_noise, "2")
+Y_inside_size = Ysize * Y_inside_norm
+
+Y_final = mix1 * Y_inside_size + mix2 * Y_outside_size
+
+# Embed Y_outside in X3
+X3_raw[,1,1] = Y_outside_size
+
 # Create noise
 noise1 = as.tensor(array(rnorm(numSubjects*numFeatures*numTimepoints), c(numSubjects, numFeatures, numTimepoints)))
 noise2 = as.tensor(array(rnorm(numSubjects*numFeatures*numTimepoints), c(numSubjects, numFeatures, numTimepoints)))
@@ -168,23 +192,6 @@ X3_noise = X3_raw + noise3
 X1_final = X1_noise@data
 X2_final = X2_noise@data
 X3_final = X3_noise@data
-
-# Generate Y
-Y_inside = rho1 * a_global1 + rho2 * a_global2 + rho3 * a_local1 + rho4 * a_local2
-y_basis = Null(scores)
-Y_outside = y_basis[,1]
-
-Y = mix1 * Y_inside + mix2 * Y_outside
-
-noiseY = rnorm(numSubjects)
-noiseY = noiseY - mean(noiseY)
-noiseY = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
-Ynoise = Y + noiseY
-Ynorm = Ynoise / norm(Ynoise, "2")
-Y_final = Ysize * Ynorm
-
-# Embed Y in X3
-X3_final[,1,1] = Y_final
 
 # Convert to Tensor
 Y_final = as.tensor(Y_final)

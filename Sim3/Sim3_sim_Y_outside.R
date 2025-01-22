@@ -13,7 +13,7 @@ numFeatures = 30
 numTimepoints = 40
 
 # Settings
-Ysize = 1
+Ysize = 0.030
 noiseOnX = 0.35 # Noise percentage on each X block
 noiseOnY = 0.01 # Noise percentage on Y
 w_global1 = 1
@@ -118,6 +118,21 @@ X3_term3 = parafac4microbiome::reinflateTensor(a_distinct3, b_distinct3, c_disti
 
 X3_raw = w_global1 * X3_term1 + w_global2 * X3_term2 + w_distinct3 * X3_term3
 
+# Generate Y orthogonal to all scores
+y_basis = Null(scores)
+Y = y_basis[,1]
+
+noiseY = rnorm(numSubjects)
+noiseY = noiseY - mean(noiseY)
+noiseY = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
+Ynoise = Y + noiseY
+Ynorm = Ynoise / norm(Ynoise, "2")
+Y_final = Ysize * Ynorm
+
+X3_raw[,1,1] = Y_final # Embed Y in X3
+
+Y_final = as.tensor(Y_final)
+
 # Create noise
 noise1 = as.tensor(array(rnorm(numSubjects*numFeatures*numTimepoints), c(numSubjects, numFeatures, numTimepoints)))
 noise2 = as.tensor(array(rnorm(numSubjects*numFeatures*numTimepoints), c(numSubjects, numFeatures, numTimepoints)))
@@ -166,23 +181,6 @@ X3_noise = X3_raw + noise3
 X1_final = X1_noise@data
 X2_final = X2_noise@data
 X3_final = X3_noise@data
-
-# Generate Y orthogonal to all scores
-y_basis = Null(scores)
-Y = y_basis[,1]
-
-noiseY = rnorm(numSubjects)
-noiseY = noiseY - mean(noiseY)
-noiseY = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
-Ynoise = Y + noiseY
-Ynorm = Ynoise / norm(Ynoise, "2")
-Y_final = Ysize * Ynorm
-
-# Embed Y in X3
-X3_final[,1,1] = Y_final
-
-# Convert to Tensor
-Y_final = as.tensor(Y_final)
 
 # Save sim
 saveRDS(X1_final, "./Sim3/Sim3_X1_Y_outside.RDS")
