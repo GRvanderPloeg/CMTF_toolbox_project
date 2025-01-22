@@ -10,13 +10,11 @@ library(foreach)
 set.seed(123)
 
 # Prepare sim settings
-# noises = seq(0, 10, length.out=51)
-# noises = rep(noises, each=100)
-noises = readRDS("./Sim1b_noise_Y_inside.RDS")
+noises = seq(0, 1, length.out=11)
 noises = rep(noises, each=100)
 
 # Run model
-cl = parallel::makeCluster(parallel::detectCores())
+cl = parallel::makeCluster(64)
 doParallel::registerDoParallel(cl)
 models = foreach::foreach(i=1:length(noises)) %dopar% {
 
@@ -39,4 +37,4 @@ parallel::stopCluster(cl)
 
 # Save model and parameters
 saveRDS(models, "Sim1b_ACMTF_CV_models_Y_inside.RDS")
-saveRDS("")
+saveRDS(noises, "Sim1b_ACMTF_CV_params_Y_inside.RDS")

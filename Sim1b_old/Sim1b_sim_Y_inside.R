@@ -138,9 +138,7 @@ noise3 = as.tensor(array(rnorm(numSubjects*numFeatures*numTimepoints), c(numSubj
 # noise3 = as.tensor(noise3)
 
 ###### NEW IN THIS SIM - VARIOUS NOISE LEVELS #######
-noises = seq(0,1, length.out=11) / (1 - seq(0,1,length.out=11))
-noises[11] = 999
-saveRDS(noises, "./Sim1b/Sim1b_noise_Y_inside.RDS")
+noises = seq(0, 1, length.out=11)
 
 for(i in 1:length(noises)){
   noiseOnX = noises[i]
@@ -197,4 +195,4 @@ allLoadings = list(scores, loadings, timeLoadings)
 saveRDS(allLoadings, "./Sim1b/Sim1b_input_loadings_Y_inside.RDS")
 
 parameters = c(w_global1, w_global2, w_local1, w_local2, w_distinct1, w_distinct2, w_distinct3, rho1, rho2, rho3, rho4)
-saveRDS(parameters, "./Sim1b/Sim1b_input_parameters_Y_inside.RDS")
+saveRDS(parameters, "./Sim1b/Sim1b_parameters_Y_inside.RDS")
