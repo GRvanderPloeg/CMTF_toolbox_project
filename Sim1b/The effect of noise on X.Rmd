@@ -102,7 +102,7 @@ ACMTF_CV_varExps = ACMTF_CV_varExps
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
 ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(noise = noise_levels)
 
-ACMTF_CV_varExps %>% as_tibble() %>% pivot_longer(-noise) %>% ggplot(aes(x=as.factor(noise),y=value)) + facet_wrap(~name) + geom_boxplot() + xlab("beta") + ylab("Variance explained (%)")
+ACMTF_CV_varExps %>% as_tibble() %>% pivot_longer(-noise) %>% ggplot(aes(x=as.factor(noise),y=value)) + facet_wrap(~name,nrow=3) + geom_boxplot() + xlab("Noise level") + ylab("Variance explained (%)")
 ```
 
 ```{r plot lambda similarity}

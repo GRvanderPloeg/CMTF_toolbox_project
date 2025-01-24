@@ -54,9 +54,7 @@ calculateFMS <- function(modelFac, realFac, numComponents) {
 ```
 
 ```{r lambda similarity function}
-lambda_true = matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)
-
-lambda_similarity = function(lambda_hat){
+lambda_similarity = function(lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)){
   lambda_hat = abs(lambda_hat)
   similarity_matrix = matrix(NA, nrow=7, ncol=7)
   for(i in 1:7){
@@ -152,27 +150,28 @@ ACMTF_CV_varExps = ACMTF_CV_varExps
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
 ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
 
-ACMTF_CV_varExps %>% as_tibble() %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name) + geom_boxplot() + xlab("beta") + ylab("Variance explained (%)")
+ACMTF_CV_varExps %>% as_tibble() %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name,nrow=3) + geom_boxplot() + xlab("beta") + ylab("Variance explained (%)")
 ```
 
 ```{r plot lambda similarity}
-ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
+lambda_true = matrix(c(0.44,0.44,0.57,0.44,0.44,0.57,0.44,0.44,0,0.44,0.44,0,0.44,0,0,0,0.44,0,0,0,0.57), nrow=3, ncol=7)
+ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){lambda_similarity(x$Fac[[8]],lambda_true=lambda_true)}))
 ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(beta=ACMTF_CV_params, index=1:length(beta))
 
 ACMTF_CV_lambda_similarity %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot() + xlab("Beta") + ylab("Lambda similarity") + scale_y_log10()
 ```
 
 ```{r plot some lambda matrix examples}
-a=ACMTF_CV_models[[2]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1e-4") + theme(legend.position="none")
+a=ACMTF_CV_models[[3]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1e-4") + theme(legend.position="none")
 
-b=ACMTF_CV_models[[1]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1e-3") + theme(legend.position="none")
+b=ACMTF_CV_models[[101]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=5e-4") + theme(legend.position="none")
 
-c=ACMTF_CV_models[[5895]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=0.05") + theme(legend.position="none")
+c=ACMTF_CV_models[[201]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1e-3") + theme(legend.position="none")
 
-d=ACMTF_CV_models[[8001]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1") + theme(legend.position="none")
+d=ACMTF_CV_models[[301]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=5e-3") + theme(legend.position="none")
 
 
-ggarrange(a,b,c,d)
+ggarrange(a,b,c,d, nrow=1, ncol=4)
 ```
 ```{r plot fms}
 ACMTF_CV_FMS1 = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
