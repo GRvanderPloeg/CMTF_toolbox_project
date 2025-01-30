@@ -54,9 +54,8 @@ calculateFMS <- function(modelFac, realFac, numComponents) {
 ```
 
 ```{r lambda similarity function}
-lambda_true = matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)
 
-lambda_similarity = function(lambda_hat){
+lambdaSimilarityIndex = function(lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)){
   lambda_hat = abs(lambda_hat)
   similarity_matrix = matrix(NA, nrow=7, ncol=7)
   for(i in 1:7){
@@ -70,7 +69,9 @@ lambda_similarity = function(lambda_hat){
   mapping = clue::solve_LSAP(similarity_matrix)
   lambda_hat_perm = lambda_hat[,mapping]
   SSR = sum((lambda_true - lambda_hat_perm)^2)
-  return(SSR)
+  
+  LSI = 1 / (1 + SSR)
+  return(LSI)
 }
 ```
 
@@ -147,23 +148,43 @@ ACMTF_CV_params = readRDS("./Sim1_ACMTF_CV_params_Y_inside.RDS")
 # ACMTF CV
 
 ```{r plot varExps}
-threshold = 99
-
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
 ACMTF_CV_varExps = ACMTF_CV_varExps * 100
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
 ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
 
-ACMTF_CV_varExps %>% as_tibble() %>% select(-correct) %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name) + geom_boxplot() + xlab("beta") + ylab("Variance explained (%)")
+ACMTF_CV_varExps %>% 
+    as_tibble() %>%
+    pivot_longer(-beta) %>%
+    ggplot(aes(x=as.factor(beta),y=value)) +
+    facet_wrap(~name, ncol=3) +
+    geom_violin(scale="width") +
+    geom_jitter(width=0.05, size=0.5) +
+    xlab(expression(beta)) +
+    ylab("Variance explained (%)") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
 ```{r plot lambda similarity}
-ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
-ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(beta=ACMTF_CV_params, index=1:length(beta))
+ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTF_CV_models, 
+                                                   FUN = function(x) {
+                                                     lambdaSimilarityIndex(x$Fac[[8]])
+                                                   }))
 
-ACMTF_CV_lambda_similarity %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot() + xlab("Beta") + ylab("Lambda similarity") + scale_y_log10()
+ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>%
+  as_tibble() %>%
+  mutate(beta = ACMTF_CV_params, index = 1:length(beta))
+
+ACMTF_CV_lambda_similarity %>%
+  ggplot(aes(x = as.factor(beta), y = V1)) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.1, size=0.75) +
+  xlab(expression(beta)) +
+  ylab("Lambda Similarity Index") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ACMTF_CV_lambda_similarity %>% ggplot(aes(x=V1)) + facet_wrap(~beta) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
 ```
-
 ```{r plot some lambda matrix examples}
 a=ACMTF_CV_models[[2]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1e-4") + theme(legend.position="none")
 
@@ -176,6 +197,11 @@ d=ACMTF_CV_models[[8001]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %
 
 ggarrange(a,b,c,d)
 ```
+```{r plot of lambda matrix values}
+df = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){max(abs(c(x$Fac[[8]])))})) %>% as_tibble()
+df %>% mutate(beta = ACMTF_CV_params) %>% ggplot(aes(x=V1)) + facet_wrap(~beta) + geom_histogram()
+```
+
 ```{r plot fms}
 ACMTF_CV_FMS1 = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
 ACMTF_CV_FMS2 = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
@@ -189,23 +215,41 @@ ACMTF_CV_FMS = cbind(ACMTF_CV_FMS1, ACMTF_CV_FMS2, ACMTF_CV_FMS3, ACMTF_CV_FMS4,
 colnames(ACMTF_CV_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
 ACMTF_CV_FMS = ACMTF_CV_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, beta=ACMTF_CV_params, index=1:length(beta))
 
-ACMTF_CV_FMS %>% select(X1,X2,X3,beta) %>% pivot_longer(-beta) %>% ggplot(aes(x=as.factor(beta),y=value)) + facet_wrap(~name, nrow=3) + geom_boxplot() + xlab("Beta") + ylab("FMS")
+ACMTF_CV_FMS %>% 
+  select(X1,X2,X3,beta) %>%
+  pivot_longer(-beta) %>%
+  ggplot(aes(x=as.factor(beta),y=value)) +
+  facet_wrap(~name, ncol=3) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.05, size=0.5) +
+  xlab(expression(beta)) +
+  ylab("Factor Match Score") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ACMTF_CV_FMS %>% select(X1,X2,X3,beta) %>% pivot_longer(-beta) %>% ggplot(aes(x=value)) + facet_grid(vars(beta),vars(name)) + geom_histogram() + ylim(0,1000) + xlab("Factor Match Score") + ylab("Number of models")
 ```
 ```{r plot loss}
 ACMTF_CV_f = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$f}))
 ACMTF_CV_f = ACMTF_CV_f %>% as_tibble() %>% mutate(beta=ACMTF_CV_params, index=1:length(beta)) %>% mutate(correct = V1 < 0.25)
 
-ACMTF_CV_f %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot() + geom_hline(yintercept=0.25, col="red") + xlab("beta") + ylab("Loss value")
+ACMTF_CV_f %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot() + geom_hline(yintercept=0.25, col="red") + xlab("beta") + ylab("Loss value") + scale_y_log10()
 ```
 
 ```{r plot lambda similarity vs fms}
 ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% select(X1, X2, X3, beta, lambda_similarity) %>% pivot_longer(-c(beta, lambda_similarity)) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_grid(vars(name), vars(beta)) + geom_point() + scale_x_log10() + theme(legend.position="none") + xlab("Lambda similarity") + ylab("FMS")
 ```
 ```{r plot fraction of correct models}
-lambda_sim_threshold = 0.15
+lambda_sim_threshold = 0.9
 fms_threshold = 0.9
 
-ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity <= lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>% ggplot(aes(x=as.factor(beta),fill=correct)) + geom_bar(col="black") + xlab("Beta") + ylab("Number of models")
+ACMTF_CV_FMS %>%
+  mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>%
+  mutate(Correct = (lambda_similarity >= lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>%
+  ggplot(aes(x=as.factor(beta),fill=Correct)) +
+  geom_bar(col="black") +
+  xlab(expression(beta)) +
+  ylab("Number of models") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 ```{r how often are the components found}
 threshold = 0.95
@@ -220,7 +264,23 @@ distinct3 = unlist(lapply(ACMTF_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
 
-componentShapes %>% as_tibble() %>% mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>% mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>% select(beta, Global, Local, Distinct) %>% pivot_longer(-beta) %>% mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>% ggplot(aes(x=as.factor(beta),fill=as.factor(value))) + facet_wrap(~name, nrow=3) + geom_bar(col="black") + labs(x="Beta",y="Number of models",fill="Number of components lost")
+componentShapes %>%
+  as_tibble() %>%
+  mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+  mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>%
+  select(beta, Global, Local, Distinct) %>%
+  pivot_longer(-beta) %>%
+  mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>%
+  ggplot(aes(x=as.factor(beta),fill=as.factor(value))) +
+  facet_wrap(~name, nrow=3) +
+  geom_bar(col="black") +
+  labs(x=expression(beta),y="Number of models",fill="Number of components lost") +
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r inspect number of iterations per beta}
+df = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$iter})) %>% as_tibble()
 ```
 
 ```{r inspect loss per iteration - beta}

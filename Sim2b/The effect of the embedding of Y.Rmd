@@ -1,0 +1,325 @@
+---
+title: "The effect of the embedding of Y"
+output: html_document
+date: "2025-01-26"
+---
+
+# Preamble
+```{r setup, include=FALSE}
+library(rTensor)
+library(CMTFtoolbox)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(scales)
+library(clue)
+```
+
+```{r define FMS}
+
+calculateFMS <- function(modelFac, realFac, numComponents) {
+  
+  # Project modelFac onto realFac to make sure components are not split
+  # modelFac = modelFac %*% pracma::pinv(t(modelFac) %*% modelFac) %*% t(modelFac) %*% realFac
+  
+  # Create a similarity matrix for the pairwise comparison
+  similarity_matrix <- matrix(0, nrow = ncol(modelFac), ncol = ncol(modelFac))
+  
+  # Compute pairwise cosine similarity across all modes
+  for (k in 1:ncol(modelFac)) {
+    for (l in 1:ncol(realFac)) {
+      vect1 <- as.matrix(modelFac[, k])
+      vect2 <- as.matrix(realFac[, l])
+      
+      # Cosine similarity
+      similarity_matrix[k, l] <- abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
+    }
+  }
+  
+  # Use Hungarian algorithm to find the best matching
+  assignment <- clue::solve_LSAP(similarity_matrix, maximum = TRUE)
+  
+  # Permute columns in the model to fit the input components
+  # modelFac_perm <- modelFac[,assignment]
+  
+  # Calculate FMS based on the best matching
+  FMS <- sum(similarity_matrix[cbind(seq_along(assignment), assignment)])
+  
+  # Average over the number of components
+  FMS <- FMS / numComponents
+  return(FMS)
+}
+
+```
+
+```{r lambda similarity function}
+lambdaSimilarityIndex = function(lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)){
+  lambda_hat = abs(lambda_hat)
+  similarity_matrix = matrix(NA, nrow=7, ncol=7)
+  for(i in 1:7){
+    for(j in 1:7){
+      real = lambda_true[,i]
+      hat = lambda_hat[,j]
+      similarity_matrix[i,j] = sum((real - hat)^2)
+    }
+  }
+  
+  mapping = clue::solve_LSAP(similarity_matrix)
+  lambda_hat_perm = lambda_hat[,mapping]
+  SSR = sum((lambda_true - lambda_hat_perm)^2)
+  
+  LSI = 1 / (1 + SSR)
+  return(LSI)
+}
+```
+
+```{r load input loadings}
+inputLoadings = readRDS("./Sim2b_input_loadings_Y_inside.RDS")
+
+# Reorganize into Fac object
+inputLoadingsFac = inputLoadings
+inputLoadingsFac[[2]] = inputLoadings[[2]][,c(1,4,7,9,11)]
+inputLoadingsFac[[3]] = inputLoadings[[3]][,c(1,4,7,9,11)]
+inputLoadingsFac[[4]] = inputLoadings[[2]][,c(2,5,8,10,12)]
+inputLoadingsFac[[5]] = inputLoadings[[3]][,c(2,5,8,10,12)]
+inputLoadingsFac[[6]] = inputLoadings[[2]][,c(3,6,13)]
+inputLoadingsFac[[7]] = inputLoadings[[3]][,c(3,6,13)]
+
+```
+
+```{r load datasets}
+X1_final = readRDS("./Sim2b_X1_Y_inside.RDS")
+X2_final = readRDS("./Sim2b_X2_Y_inside.RDS")
+X3_final = readRDS("./Sim2b_X3_Y_inside.RDS")
+# Y_final = readRDS("./Sim2_Y_Y_inside.RDS") # This is different every time
+```
+
+# Analyze ACMTFR results
+```{r load ACMTF models}
+ACMTFR_CV_models = readRDS("./Sim2b_ACMTFR_CV_Y_inside.RDS")
+# ACMTFR_CV_params = readRDS("./Sim2b_ACMTFR_CV_params_Y_inside.RDS") # NOT SAVED PROPERLY
+
+noises = seq(0, 1, length.out=11)
+pis = c(0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
+simSettings = cbind(rep(noises, each=13), rep(pis, 11))
+simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
+ACMTFR_CV_params = simSettings
+```
+
+# ACMTFR
+```{r plot varExps}
+ACMTF_CV_varExpsX = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){x$varExp})) %>% as_tibble()
+ACMTF_CV_varExpsY = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){(x$varExpY)})) %>% as_tibble()
+colnames(ACMTF_CV_varExpsX) = c("X1", "X2", "X3")
+ACMTF_CV_varExpsX = ACMTF_CV_varExpsX %>% mutate(pi = ACMTFR_CV_params[,2], embedding = ACMTFR_CV_params[,1])
+ACMTF_CV_varExps = ACMTF_CV_varExpsX %>% as_tibble() %>% mutate(Y=ACMTF_CV_varExpsY$V1)
+
+ACMTF_CV_varExps %>% filter(pi>0) %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_grid(vars(name),vars(embedding)) + geom_boxplot() + xlab("Pi") + ylab("Variance explained (%)") + ylim(0,100)
+
+ACMTF_CV_varExps %>% filter(pi==1) %>% select(embedding, Y) %>% ggplot(aes(x=as.factor(embedding),y=Y)) + geom_boxplot() + xlab("Noise on Y") + ylab("Variance explained (%)") + ggtitle("Pi=1")
+
+ACMTF_CV_varExps %>% filter(embedding==0.8) %>% select(pi, Y) %>% ggplot(aes(x=as.factor(pi),y=Y)) + geom_boxplot() + xlab("Pi") + ylab("Variance explained (%)") + ggtitle("Noise on Y = 80%")
+
+ACMTF_CV_varExps %>% filter(embedding==0.8) %>% select(pi, X1, X2, X3) %>% pivot_longer(-pi) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_wrap(~name, nrow=3) + geom_boxplot() + xlab("Pi") + ylab("Variance explained (%)") + ggtitle("Noise on Y = 80%") + ylim(0,100)
+
+ACMTF_CV_varExps %>%
+  filter(embedding==0.5) %>%
+  select(-embedding) %>%
+  pivot_longer(-pi) %>%
+  ggplot(aes(x=as.factor(pi),y=value)) +
+  facet_wrap(~name, ncol=4) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.05, size=0.5) +
+  xlab(expression(pi)) +
+  ylab("Variance explained (%)") +
+  ylim(0,100) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r plot lambda similarity}
+ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){lambdaSimilarityIndex(x$Fac[[8]])}))
+ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(pi = ACMTFR_CV_params[,2], embedding = ACMTFR_CV_params[,1], index=1:nrow(.))
+
+ACMTF_CV_lambda_similarity %>% ggplot(aes(x=as.factor(pi),y=V1)) + facet_wrap(~embedding) + geom_boxplot() + scale_y_log10()
+
+ACMTF_CV_lambda_similarity %>%
+  filter(embedding==0.5) %>% 
+  select(-embedding) %>%
+  ggplot(aes(x = as.factor(pi), y = V1)) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.1, size=0.75) +
+  xlab(expression(pi)) +
+  ylab("Lambda Similarity Index") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ACMTF_CV_lambda_similarity %>% filter(embedding==0.5) %>% select(-embedding) %>% ggplot(aes(x=V1)) + facet_wrap(~pi) + geom_histogram() + ylim(0,100) + xlab("Lambda Similarity Index") + ylab("Number of models")
+```
+
+```{r plot some lambda matrix examples}
+a=ACMTFR_CV_models[[10]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=1") + theme(legend.position="none")
+
+b=ACMTFR_CV_models[[78]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=0.8") + theme(legend.position="none")
+
+c=ACMTFR_CV_models[[143]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=0.4") + theme(legend.position="none")
+
+
+ggarrange(a,b,c)
+```
+```{r plot fms}
+ACMTF_CV_FMS1 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTF_CV_FMS2 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS3 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS4 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS5 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS6 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTF_CV_FMS7 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTF_CV_FMS = cbind(ACMTF_CV_FMS1, ACMTF_CV_FMS2, ACMTF_CV_FMS3, ACMTF_CV_FMS4, ACMTF_CV_FMS5, ACMTF_CV_FMS6, ACMTF_CV_FMS7)
+colnames(ACMTF_CV_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTF_CV_FMS = ACMTF_CV_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, pi=ACMTFR_CV_params[,2], embedding=ACMTFR_CV_params[,1], index=1:length(pi))
+
+ACMTF_CV_FMS %>% select(X1,X2,X3,pi,embedding) %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_grid(vars(name),vars(embedding)) + geom_boxplot()
+
+ACMTF_CV_FMS %>% select(X1,X2,X3,pi,embedding) %>% pivot_longer(-c(pi,embedding)) %>% filter(embedding %in% c(0, 0.5, 1)) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_grid(vars(name),vars(embedding)) + geom_boxplot() + xlab("Pi") + ylab("FMS")
+
+ACMTF_CV_FMS %>% 
+  select(X1,X2,X3,pi,embedding) %>%
+  filter(embedding==0.5) %>%
+  select(-embedding) %>%
+  pivot_longer(-pi) %>%
+  ggplot(aes(x=as.factor(pi),y=value)) +
+  facet_wrap(~name, ncol=3) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.05, size=0.5) +
+  xlab(expression(pi)) +
+  ylab("Factor Match Score") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ACMTF_CV_FMS %>% select(X1,X2,X3,pi,embedding) %>% filter(embedding==0.5) %>% select(-embedding) %>% pivot_longer(-pi) %>% ggplot(aes(x=value)) + facet_grid(vars(pi),vars(name)) + geom_histogram() + ylim(0,100) + xlab("Factor Match Score") + ylab("Number of models")
+```
+
+```{r plot loss}
+ACMTF_CV_f = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){x$f}))
+ACMTF_CV_f = ACMTF_CV_f %>% as_tibble() %>% mutate(pi=ACMTFR_CV_params[,2], embedding=ACMTFR_CV_params[,1], index=1:length(pi))
+
+ACMTF_CV_f %>% ggplot(aes(x=as.factor(pi),y=V1)) + facet_wrap(~embedding) + geom_boxplot() + xlab("Pi") + ylab("Loss value") + scale_y_log10()
+```
+
+```{r plot FMS vs lambda similarity}
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% select(X1, pi, lambda_similarity, embedding) %>% ggplot(aes(x=lambda_similarity,y=X1)) + facet_grid(vars(pi),vars(embedding)) + geom_point() + scale_x_log10()
+
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% select(X2, pi, lambda_similarity, embedding) %>% ggplot(aes(x=lambda_similarity,y=X2)) + facet_grid(vars(pi),vars(embedding)) + geom_point() + scale_x_log10()
+
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% select(X3, pi, lambda_similarity, embedding) %>% ggplot(aes(x=lambda_similarity,y=X3)) + facet_grid(vars(pi),vars(embedding)) + geom_point() + scale_x_log10()
+```
+
+```{r fraction of correct models}
+lambda_sim_threshold = 0.9
+fms_threshold = 0.9
+
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity >= lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>% ggplot(aes(x=as.factor(pi),fill=correct)) + geom_bar(col="black") + xlab("Noise level") + ylab("Number of models")
+```
+
+```{r how often are the components found}
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim2b_Y_Y_inside_0.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+global1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
+
+componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found)
+
+componentShapes %>% as_tibble() %>% select(pi, embedding, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found) %>% pivot_longer(-c(pi,embedding)) %>% mutate(Found = value > threshold) %>% ggplot(aes(x=as.factor(pi),fill=Found)) + facet_grid(vars(name),vars(pi)) + geom_bar()
+
+componentShapes %>% as_tibble() %>% mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>% mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>% select(pi, embedding, Global, Local, Distinct) %>% pivot_longer(-c(pi,embedding)) %>% mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>% ggplot(aes(x=as.factor(pi),fill=as.factor(value))) + facet_grid(vars(name),vars(embedding)) + geom_bar(col="black") + labs(x="Pi",y="Number of models",fill="Number of components lost") + theme(legend.position="top")
+
+componentShapes %>%
+  as_tibble() %>%
+  mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+  mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>%
+  select(pi, embedding, Global, Local, Distinct) %>%
+  filter(embedding==0.5) %>%
+  pivot_longer(-pi) %>%
+  mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>%
+  ggplot(aes(x=as.factor(pi),fill=as.factor(value))) +
+  facet_wrap(~name, nrow=3) +
+  geom_bar(col="black") +
+  labs(x=expression(pi),y="Number of models",fill="Number of components lost") +
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r grab the best local1 component from every model}
+noises = seq(0, 1, length.out=11)
+noises = noises / (1 - noises)
+noises[11] = 999
+pis = c(0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
+simSettings = cbind(rep(noises, each=13), rep(pis, 11))
+simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
+
+local_comp = inputLoadingsFac[[1]][,3]
+
+y_orth = matrix(NA, nrow=50, ncol=nrow(simSettings))
+for(i in 1:nrow(simSettings)){
+  noise = simSettings[i,1]
+  y = readRDS(paste0("./Sim2b_Y_Y_inside_", noise, ".RDS"))
+  y = y@data
+  y = as.matrix(y)
+  
+  dot_y_v <- sum(y * local_comp)           # crossprod(y, local_comp) in matrix form
+  dot_v_v <- sum(local_comp * local_comp)  # crossprod(local_comp, local_comp)
+  y_proj <- (dot_y_v / dot_v_v) * local_comp
+  y_orth[,i] <- y - y_proj
+}
+
+Y_found_outside = rep(NA, length(ACMTFR_CV_models))
+for(i in 1:length(ACMTFR_CV_models)){
+  Y_found_outside[i] = max(abs(cor(ACMTFR_CV_models[[i]]$Fac[[1]], y_orth[,i])))
+}
+
+
+Y_found_inside = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+# Y_found_outside = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], Youtside)))}))
+
+df = cbind(ACMTF_CV_FMS, Y_found_inside, Y_found_outside)
+
+componentShapes %>% as_tibble() %>% select(pi, embedding, local1, y_found) %>% group_by(pi, embedding) %>% summarize(m1 = median(local1), y1 = median(y_found)) %>% ungroup() %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value,group=as.factor(name),col=as.factor(name))) + facet_wrap(~embedding) + geom_line() + geom_point() + xlab("Pi") + ylab("Maximum correlation") + scale_color_manual(name="Component", labels=c("Local1", "Y"), values=hue_pal()(2))
+
+df %>% as_tibble() %>% ggplot(aes(x=Y_found_inside,y=Y_found_outside)) + facet_grid(vars(pi),vars(embedding)) + geom_point() + xlim(0,1) + ylim(0,1) + xlab("Local1") + ylab("Y noise") + geom_abline()
+
+df %>% as_tibble() %>% select(pi, embedding, Y_found_inside, Y_found_outside) %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_grid(vars(embedding),vars(name)) + geom_boxplot()
+
+df %>% as_tibble() %>% select(pi, embedding, Y_found_inside, Y_found_outside) %>% group_by(pi, embedding) %>% summarize(m1 = median(local1), y1 = median(y_found)) %>% ungroup() %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value,group=as.factor(name),col=as.factor(name))) + facet_wrap(~embedding) + geom_line() + geom_point() + xlab("Pi") + ylab("Maximum correlation") + scale_color_manual(name="Component", labels=c("Local1", "Y"), values=hue_pal()(2))
+
+df %>% as_tibble() %>% select(pi, embedding, Y_found_inside, Y_found_outside) %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value,fill=as.factor(name))) + facet_wrap(~embedding) + geom_boxplot() + xlab("Pi") + ylab("Maximum correlation") + scale_fill_manual(name="Component", labels=c("Y_inside", "Y_outside"), values=hue_pal()(2)) + theme(legend.position="top")
+
+df %>% 
+  as_tibble() %>%
+  select(pi, embedding, Y_found_inside, Y_found_outside) %>% 
+  filter(embedding==0.5) %>%
+  select(-embedding) %>%
+  pivot_longer(-pi) %>%
+  ggplot(aes(x=as.factor(pi),y=value,fill=as.factor(name))) +
+  geom_violin(scale="width") +
+  geom_point(size=0.5,position=position_jitterdodge(jitter.width=0.1)) +
+  xlab(expression(pi)) +
+  ylab("Maximum correlation") +
+  scale_fill_manual(name="Component", labels=c("Y_inside", "Y_outside"), values=hue_pal()(2)) +
+  theme(legend.position="none")
+```
+
+```{r number of iterations}
+df = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){x$iter})) %>% as_tibble()
+
+df %>% mutate(pi=ACMTFR_CV_params[,2], embedding = ACMTFR_CV_params[,1]) %>% filter(embedding==0.5) %>% ggplot(aes(x=V1)) + facet_wrap(~pi) + geom_histogram() + scale_x_log10() + xlab("Number of iterations") + ylab("Number of models")
+```

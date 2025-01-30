@@ -11,10 +11,12 @@ set.seed(123)
 
 # Prepare sim settings
 noises = seq(0, 1, length.out=11)
+noises = noises / (1 - noises)
+noises[11] = 999
 noises = rep(noises, each=100)
 
 # Run model
-cl = parallel::makeCluster(64)
+cl = parallel::makeCluster(parallel::detectCores())
 doParallel::registerDoParallel(cl)
 models = foreach::foreach(i=1:length(noises)) %dopar% {
   noiseOnY = noises[i]

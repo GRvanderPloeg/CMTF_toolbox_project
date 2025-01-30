@@ -361,3 +361,10 @@ y_found %>% filter(beta==1e-3) %>% ggplot(aes(x=as.factor(pi),y=cosine)) + geom_
 # df %>% select(lambda, beta, iteration) %>% ggplot(aes(x=iteration,y=lambda)) + facet_wrap(~beta, scales="free_x") + geom_line()
 # df %>% select(-f) %>% pivot_longer(-c(iteration,pi)) %>% ggplot(aes(x=iteration,y=value)) + facet_grid(vars(name),vars(pi), scales="free") + geom_line() + scale_y_log10()
 ```
+
+```{r check if Y has been found}
+temp = do.call(rbind, lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], as.matrix(Y_final@data))))}))
+temp %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% arrange(desc(V1))
+
+models[[153]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=1") + theme(legend.position="none")
+```

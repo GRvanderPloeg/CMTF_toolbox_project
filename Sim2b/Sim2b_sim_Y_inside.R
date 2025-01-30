@@ -23,10 +23,10 @@ w_distinct1 = 1
 w_distinct2 = 1
 w_distinct3 = 1
 
-rho1 = 1
-rho2 = 1
+rho1 = 0
+rho2 = 0
 rho3 = 1
-rho4 = 1
+rho4 = 0
 
 # Simulation
 
@@ -172,6 +172,8 @@ noiseY = rnorm(numSubjects)
 noiseY = noiseY - mean(noiseY)
 
 noises = seq(0, 1, length.out=11)
+noises = noises / (1 - noises)
+noises[11] = 999
 for(i in 1:length(noises)){
   noiseOnY = noises[i]
   noiseY_final = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))

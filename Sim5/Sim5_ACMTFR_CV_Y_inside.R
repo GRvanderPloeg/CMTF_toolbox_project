@@ -21,13 +21,13 @@ modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
 Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=FALSE)
 
 # Prepare sim settings
-pis = c(0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1)
+pis = c(0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1)
 simSettings = rep(pis, each=100)
 
 # Run model
 cl = parallel::makeCluster(parallel::detectCores())
 doParallel::registerDoParallel(cl)
-models = foreach::foreach(i=1:nrow(simSettings)) %dopar% {
+models = foreach::foreach(i=1:length(simSettings)) %dopar% {
   piValue = simSettings[i]
   model=CMTFtoolbox::acmtfr_opt(Z,as.matrix(Y_final@data),numComponents=7,initialization="random",beta=rep(1e-3,3),pi=piValue,abs_tol=1e-10,rel_tol=1e-10,nstart=1)
 }

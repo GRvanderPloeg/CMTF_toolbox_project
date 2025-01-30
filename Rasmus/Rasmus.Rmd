@@ -12,162 +12,16 @@ library(parafac4microbiome)
 library(CMTFtoolbox)
 ```
 
-```{r load faeces data}
-df = read.csv("./Data/faecesCounts.csv", header=FALSE, sep=" ") %>% as_tibble()
-taxonomy = read.csv("./Data/newTaxonomy_faeces.csv", header=FALSE, sep=" ") %>% as_tibble()
-sampleInfo = read.csv("./Data/faeces_sampleMeta.csv", header=FALSE, sep=" ") %>% as_tibble()
-colnames(sampleInfo) = c("Sample", "RCID", "BMI", "BMI.group", "Days", "Gestational.age", "C.section", "AB.infant", "AB.mother", "Secretor", "Lewis", "subject")
 
-# Make subject metadata
-subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% mutate(subject=as.character(subject)) %>% arrange(subject)
 
-# Filter taxa to taxa with at least 1 non-zero value
-featureMask = colSums(df) > 0
-df = df[,featureMask]
-taxonomy = taxonomy[featureMask,]
-
-# Filter based on sparsity
-# TODO: filter using group information (13/11/24: no longer relevant)
-threshold = 0.75
-
-sparsity = colSums(df==0) / nrow(df)
-
-featureSelection = sparsity <= threshold
-taxonomy_filtered = taxonomy[featureSelection,]
-df_filtered = df[,featureSelection]
-
-# CLR
-df_clr = t(apply(df_filtered+1, 1, function(x){log(x / compositions::geometricmean(x))})) %>% as_tibble()
-
-# Make into cube
-I = length(unique(sampleInfo$subject))
-J = ncol(df_clr)
-K = length(unique(sampleInfo$Days))
-X = array(0L, c(I,J,K))
-timepoints = sampleInfo %>% arrange(Days) %>% select(Days) %>% unique() %>% pull()
-
-for(k in 1:K){
-  Day = timepoints[k]
-  X[,,k] = cbind(df_clr, sampleInfo) %>% as_tibble() %>% mutate(subject=as.character(subject)) %>% filter(Days == Day) %>% select(c(colnames(df_clr),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
-}
-
-# Center and scale
-X_cnt = parafac4microbiome::multiwayCenter(X, mode=1)
-X_cnt_scl = parafac4microbiome::multiwayScale(X_cnt, mode=2)
-
-faeces_df = X_cnt_scl
-faeces_subjectMeta = subjectMeta
-faeces_taxonomy = taxonomy_filtered
-faeces_timepoints = timepoints
-```
-```{r load milk data}
-df = read.csv("./Data/milkCounts.csv", header=FALSE, sep=" ") %>% as_tibble()
-taxonomy = read.csv("./Data/newTaxonomy_milk.csv", header=FALSE, sep=" ") %>% as_tibble()
-sampleInfo = read.csv("./Data/milk_sampleMeta.csv", header=FALSE, sep=" ") %>% as_tibble()
-colnames(sampleInfo) = c("Sample", "RCID", "BMI", "BMI.group", "Days", "Gestational.age", "C.section", "AB.infant", "AB.mother", "Secretor", "Lewis", "subject")
-
-# Make subject metadata
-subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% mutate(subject=as.character(subject)) %>% arrange(subject)
-
-# Filter taxa to taxa with at least 1 non-zero value
-featureMask = colSums(df) > 0
-df = df[,featureMask]
-taxonomy = taxonomy[featureMask,]
-
-# Filter based on sparsity
-# TODO: filter using group information
-threshold = 0.85
-
-sparsity = colSums(df==0) / nrow(df)
-
-featureSelection = sparsity <= threshold
-taxonomy_filtered = taxonomy[featureSelection,]
-df_filtered = df[,featureSelection]
-
-# CLR
-df_clr = t(apply(df_filtered+1, 1, function(x){log(x / compositions::geometricmean(x))})) %>% as_tibble()
-
-# Make into cube
-I = length(unique(sampleInfo$subject))
-J = ncol(df_clr)
-K = length(unique(sampleInfo$Days))
-X = array(0L, c(I,J,K))
-timepoints = sampleInfo %>% arrange(Days) %>% select(Days) %>% unique() %>% pull()
-
-for(k in 1:K){
-  Day = timepoints[k]
-  X[,,k] = cbind(df_clr, sampleInfo) %>% as_tibble() %>% mutate(subject=as.character(subject)) %>% filter(Days == Day) %>% select(c(colnames(df_clr),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
-}
-
-# Center and scale
-X_cnt = parafac4microbiome::multiwayCenter(X, mode=1)
-X_cnt_scl = parafac4microbiome::multiwayScale(X_cnt, mode=2)
-
-milk_df = X_cnt_scl
-milk_subjectMeta = subjectMeta
-milk_taxonomy = taxonomy_filtered
-milk_timepoints = timepoints
-```
-
-```{r load milk metabolomics data}
-df = read.csv("./Data/milkMetabNumeric.csv", header=FALSE, sep=" ") %>% as_tibble()
-taxonomy = read.csv("./Data/milk_metab_CAS_numbers.csv", header=TRUE, sep=" ") %>% as_tibble()
-sampleInfo = read.csv("./Data/milkMetab_sampleMeta.csv", header=FALSE, sep=" ") %>% as_tibble()
-colnames(sampleInfo) = c("RCID", "BMI", "BMI.group", "Days", "Gestational.age", "C.section", "AB.infant", "AB.mother", "Secretor", "Lewis", "subject")
-
-# Make subject metadata
-subjectMeta = sampleInfo %>% select(subject, BMI, BMI.group, C.section, Secretor, Lewis) %>% unique() %>% mutate(subject=as.character(subject)) %>% arrange(subject)
-
-# Remove duplicates
-drop = c(61,81,146)
-subjectMeta = subjectMeta %>% mutate(index=1:nrow(.)) %>% filter(!index %in% drop) %>% select(-index) %>% arrange(subject)
-
-# Log transform
-df_log = log(df)
-
-# Make into cube
-I = length(unique(sampleInfo$subject))
-J = ncol(df_log)
-K = length(unique(sampleInfo$Days))
-X = array(0L, c(I,J,K))
-timepoints = sampleInfo %>% arrange(Days) %>% select(Days) %>% unique() %>% pull()
-
-for(k in 1:K){
-  Day = timepoints[k]
-  X[,,k] = cbind(df_log, sampleInfo) %>% as_tibble() %>% mutate(subject=as.character(subject)) %>% filter(Days == Day) %>% select(c(colnames(df_log),subject)) %>% right_join(subjectMeta) %>% arrange(subject) %>% select(-colnames(subjectMeta)) %>% as.matrix()
-}
-
-# Center and scale
-X_cnt = parafac4microbiome::multiwayCenter(X, mode=1)
-X_cnt_scl = parafac4microbiome::multiwayScale(X_cnt, mode=2)
-
-milkMetab_df = X_cnt_scl
-milkMetab_subjectMeta = subjectMeta
-milkMetab_taxonomy = taxonomy
-milkMetab_timepoints = timepoints
-```
-```{r homogenize subjects}
-sharedSubjects = intersect(intersect(faeces_subjectMeta$subject, milk_subjectMeta$subject), milkMetab_subjectMeta$subject)
-
-faeces_homogenized = faeces_df[faeces_subjectMeta$subject %in% sharedSubjects,,]
-milk_homogenized = milk_df[milk_subjectMeta$subject %in% sharedSubjects,,]
-milkMetab_homogenized = milkMetab_df[milkMetab_subjectMeta$subject %in% sharedSubjects,,]
-
-homogenized_subjectMeta = faeces_subjectMeta %>% filter(subject %in% sharedSubjects) %>% arrange(subject)
-```
-
-```{r prepare ACMTF input data}
-datasets = list(faeces_homogenized, milk_homogenized, milkMetab_homogenized)
-modes = list(c(1,2,3),c(1,4,5),c(1,6,7))
-Z = setupCMTFdata(datasets, modes)
-```
 
 ```{r check FMS}
-FMS_result = investigateFMS(datasets, modes, sharedMode=1, numFolds=12, numCores=12, jackKnife=TRUE)
+# FMS_result = ncrossreg(Jakobsen2025$Z, Jakobsen2025$homogenizedSubjectMetadata$BMI, maxNumComponents=10, pi=0.95, nstart=100, numCores=parallel::detectCores())
 ```
 
 ```{r run ACMTF}
-model = acmtf_opt(Z, 2, nstart=100, numCores=12)
+model = acmtfr_opt(Jakobsen2025$Z, Jakobsen2025$homogenizedSubjectMetadata$BMI, 1, nstart=12, numCores=12, pi=1)
+
 ```
 
 ```{r plot the model}

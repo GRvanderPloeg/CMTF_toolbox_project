@@ -53,9 +53,7 @@ calculateFMS <- function(modelFac, realFac, numComponents) {
 ```
 
 ```{r lambda similarity function}
-lambda_true = matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)
-
-lambda_similarity = function(lambda_hat){
+lambdaSimilarityIndex = function(lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)){
   lambda_hat = abs(lambda_hat)
   similarity_matrix = matrix(NA, nrow=7, ncol=7)
   for(i in 1:7){
@@ -69,7 +67,9 @@ lambda_similarity = function(lambda_hat){
   mapping = clue::solve_LSAP(similarity_matrix)
   lambda_hat_perm = lambda_hat[,mapping]
   SSR = sum((lambda_true - lambda_hat_perm)^2)
-  return(SSR)
+  
+  LSI = 1 / (1 + SSR)
+  return(LSI)
 }
 ```
 
@@ -100,16 +100,33 @@ noise_levels = rep(noise_levels, each=100)
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
 ACMTF_CV_varExps = ACMTF_CV_varExps
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
-ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(noise = noise_levels)
+ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(noise = noise_levels*100)
 
-ACMTF_CV_varExps %>% as_tibble() %>% pivot_longer(-noise) %>% ggplot(aes(x=as.factor(noise),y=value)) + facet_wrap(~name,nrow=3) + geom_boxplot() + xlab("Noise level") + ylab("Variance explained (%)")
+ACMTF_CV_varExps %>% 
+    as_tibble() %>%
+    pivot_longer(-noise) %>%
+    ggplot(aes(x=as.factor(noise),y=value)) +
+    facet_wrap(~name, ncol=3) +
+    geom_violin(scale="width") +
+    geom_jitter(width=0.05, size=0.5) +
+    xlab("Noise level (%)") +
+    ylab("Variance explained (%)") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
 ```{r plot lambda similarity}
-ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
-ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(noise=noise_levels, index=1:length(noise))
+ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){lambdaSimilarityIndex(x$Fac[[8]])}))
+ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(noise=noise_levels*100, index=1:length(noise))
 
-ACMTF_CV_lambda_similarity %>% ggplot(aes(x=as.factor(noise),y=V1)) + geom_boxplot() + xlab("Noise level") + ylab("Lambda similarity") + scale_y_log10()
+ACMTF_CV_lambda_similarity %>%
+  ggplot(aes(x = as.factor(noise), y = V1)) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.1, size=0.75) +
+  xlab("Noise level (%)") +
+  ylab("Lambda Similarity Index") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ACMTF_CV_lambda_similarity %>% ggplot(aes(x=V1)) + facet_wrap(~noise) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
 ```
 
 ```{r plot some lambda matrix examples}
@@ -124,6 +141,21 @@ d=ACMTF_CV_models[[940]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>
 
 ggarrange(a,b,c,d)
 ```
+
+```{r plot of lambda matrix values}
+df = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){min(abs(c(x$Fac[[8]])))})) %>% as_tibble()
+df %>% mutate(noise = noise_levels) %>% ggplot(aes(x=V1)) + facet_wrap(~noise) + geom_histogram()
+
+df = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){max(abs(c(x$Fac[[8]])))})) %>% as_tibble()
+df %>% mutate(noise = noise_levels) %>% ggplot(aes(x=V1)) + facet_wrap(~noise) + geom_histogram()
+```
+```{r plot of lambda term versus x block terms}
+loss_x = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){sum(x$f_per_block)})) %>% as_tibble()
+loss_lambda = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){sum(x$f_lambda)})) %>% as_tibble()
+
+loss_x %>% as_tibble() %>% mutate(lambda = loss_lambda$V1, noise = noise_levels) %>% pivot_longer(-c(lambda,noise)) %>% ggplot(aes(x=lambda,y=value)) + facet_wrap(~noise) + geom_point() + scale_y_log10() + scale_x_log10()
+```
+
 ```{r plot fms}
 ACMTF_CV_FMS1 = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
 ACMTF_CV_FMS2 = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
@@ -135,16 +167,27 @@ ACMTF_CV_FMS7 = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){calculate
 
 ACMTF_CV_FMS = cbind(ACMTF_CV_FMS1, ACMTF_CV_FMS2, ACMTF_CV_FMS3, ACMTF_CV_FMS4, ACMTF_CV_FMS5, ACMTF_CV_FMS6, ACMTF_CV_FMS7)
 colnames(ACMTF_CV_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
-ACMTF_CV_FMS = ACMTF_CV_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, noise=noise_levels, index=1:length(noise_levels))
+ACMTF_CV_FMS = ACMTF_CV_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, noise=noise_levels*100, index=1:length(noise_levels))
 
-ACMTF_CV_FMS %>% select(X1,X2,X3,noise) %>% pivot_longer(-noise) %>% ggplot(aes(x=as.factor(noise),y=value)) + facet_wrap(~name, nrow=3) + geom_boxplot() + xlab("Noise level") + ylab("FMS")
+ACMTF_CV_FMS %>% 
+  select(X1,X2,X3,noise) %>%
+  pivot_longer(-noise) %>%
+  ggplot(aes(x=as.factor(noise),y=value)) +
+  facet_wrap(~name, ncol=3) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.05, size=0.5) +
+  xlab("Noise level (%)") +
+  ylab("Factor Match Score") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ACMTF_CV_FMS %>% select(X1,X2,X3,noise) %>% pivot_longer(-noise) %>% ggplot(aes(x=value)) + facet_grid(vars(noise),vars(name)) + geom_histogram() + ylim(0,100) + xlab("Factor Match Score") + ylab("Number of models")
 ```
 
 ```{r plot loss}
 ACMTF_CV_f = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$f}))
 ACMTF_CV_f = ACMTF_CV_f %>% as_tibble() %>% mutate(noise=noise_levels, index=1:length(noise)) %>% mutate(correct = V1 < 0.25)
 
-ACMTF_CV_f %>% ggplot(aes(x=as.factor(noise),y=V1)) + geom_boxplot() + geom_hline(yintercept=0.25, col="red") + xlab("Noise level") + ylab("Loss value")
+ACMTF_CV_f %>% ggplot(aes(x=as.factor(noise),y=V1)) + geom_boxplot() + geom_hline(yintercept=0.25, col="red") + xlab("Noise level") + ylab("Loss value") + scale_y_log10()
 ```
 
 ```{r plot lambda similarity vs fms}
@@ -152,10 +195,10 @@ ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% s
 ```
 
 ```{r plot fraction of correct models}
-lambda_sim_threshold = 0.15
+lambda_sim_threshold = 0.9
 fms_threshold = 0.9
 
-ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity <= lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>% ggplot(aes(x=as.factor(noise),fill=correct)) + geom_bar(col="black") + xlab("Noise level") + ylab("Number of models")
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity > lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>% ggplot(aes(x=as.factor(noise),fill=correct)) + geom_bar(col="black") + xlab("Noise level") + ylab("Number of models")
 ```
 
 ```{r how often are the components found}
@@ -171,7 +214,19 @@ distinct3 = unlist(lapply(ACMTF_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
 
-componentShapes %>% as_tibble() %>% mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>% mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>% select(noise, Global, Local, Distinct) %>% pivot_longer(-noise) %>% mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>% ggplot(aes(x=as.factor(noise),fill=as.factor(value))) + facet_wrap(~name, nrow=3) + geom_bar(col="black") + labs(x="Noise level",y="Number of models",fill="Number of components lost")
+componentShapes %>%
+  as_tibble() %>%
+  mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+  mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>%
+  select(noise, Global, Local, Distinct) %>%
+  pivot_longer(-noise) %>%
+  mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>%
+  ggplot(aes(x=as.factor(noise),fill=as.factor(value))) +
+  facet_wrap(~name, nrow=3) +
+  geom_bar(col="black") +
+  labs(x="Noise level (%)",y="Number of models",fill="Number of components lost") +
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
 ```{r inspect loss per iteration - noise}
