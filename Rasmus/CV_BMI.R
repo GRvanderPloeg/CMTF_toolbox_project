@@ -12,7 +12,7 @@ for(i in 1:length(pi_values)){
   Y = Jakobsen2025$homogenizedSubjectMetadata$BMI
   Ycnt = Y - mean(Y)
 
-  result = ncrossreg(Jakobsen2025$Z, Ycnt, maxNumComponents=10, pi=pi, nstart=100, numCores=parallel::detectCores(), method="L-BFGS")
+  result = ncrossreg(Jakobsen2025$Z, Ycnt, maxNumComponents=10, pi=pi, nstart=50, numCores=parallel::detectCores(), method="L-BFGS", cvFolds=10)
   saveRDS(result, paste0("./CV_BMI_", pi, ".RDS"))
 }
 

@@ -24,10 +24,10 @@ betas = c(1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1, 1)
 betas = rep(betas, each=1000)
 
 # Run model
-cl = parallel::makeCluster(64)
+cl = parallel::makeCluster(parallel::detectCores())
 doParallel::registerDoParallel(cl)
 models = foreach::foreach(i=1:length(betas)) %dopar% {
-  model=CMTFtoolbox::acmtf_opt(Z,numComponents=7,initialization="random",beta=rep(betas[i],3),abs_tol=1e-10,rel_tol=1e-10,nstart=1)
+  model=CMTFtoolbox::acmtf_opt(Z,numComponents=7,initialization="random",beta=rep(betas[i],3),abs_tol=1e-10,rel_tol=1e-10,nstart=1,method="L-BFGS")
 }
 parallel::stopCluster(cl)
 

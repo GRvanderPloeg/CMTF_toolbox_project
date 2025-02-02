@@ -12,36 +12,104 @@ library(parafac4microbiome)
 library(CMTFtoolbox)
 ```
 
+```{r check CV}
+# BMI1 = readRDS("./CV_small_BMI_0.5.RDS")
+# BMI2 = readRDS("./CV_small_BMI_0.75.RDS")
+# BMI3 = readRDS("./CV_small_BMI_0.9.RDS")
+# BMI4 = readRDS("./CV_small_BMI_0.95.RDS")
+# BMI5 = readRDS("./CV_small_BMI_1.RDS")
+# 
+# WHZ1 = readRDS("./CV_small_WHZ_0.5.RDS")
+# WHZ2 = readRDS("./CV_small_WHZ_0.75.RDS")
+# WHZ3 = readRDS("./CV_small_WHZ_0.9.RDS")
+# WHZ4 = readRDS("./CV_small_WHZ_0.95.RDS")
+# WHZ5 = readRDS("./CV_small_WHZ_1.RDS")
 
-
-
-```{r check FMS}
-# FMS_result = ncrossreg(Jakobsen2025$Z, Jakobsen2025$homogenizedSubjectMetadata$BMI, maxNumComponents=10, pi=0.95, nstart=100, numCores=parallel::detectCores())
+# For BMI and pi=1: 1 or 4 components
+# For WHZ and pi=1: 1 component
 ```
 
-```{r run ACMTF}
-model = acmtfr_opt(Jakobsen2025$Z, Jakobsen2025$homogenizedSubjectMetadata$BMI, 1, nstart=12, numCores=12, pi=1)
+```{r plot the things}
+# plotCV = function(result){
+#   varExpData = result$varExp
+#   RMSEdata = result$RMSE
+#   a = varExpData %>%
+#     pivot_longer(-numComponents) %>%
+#     ggplot(ggplot2::aes(x = numComponents,y = value, col = as.factor(name))) +
+#     geom_path() +
+#     geom_point() +
+#     labs(x="Number of components", y="Variance explained (%)", color="Block") +
+#     scale_x_continuous(breaks=varExpData$numComponents)
+#   b = RMSEdata %>%
+#     ggplot(ggplot2::aes(x = numComponents, y = RMSE)) +
+#     geom_path() +
+#     geom_point() +
+#     labs(x = "Number of components", y = "RMSE") +
+#     scale_x_continuous(breaks = RMSEdata$numComponents)
+#   ggarrange(a,b)
+# }
+# 
+# plotCV(BMI1)
+```
 
+```{r run ACMTF-R}
+
+Ybmi = Jakobsen2025$homogenizedSubjectMetadata$BMI
+Ybmi_cnt = Ybmi - mean(Ybmi)
+
+# Re-define Y and Z due to missing WHZ data
+Y = Jakobsen2025$homogenizedSubjectMetadata$whz.6m
+mask = !is.na(Y)
+Ywhz = Y[mask]
+Ywhz_cnt = Ywhz - mean(Ywhz)
+
+datasets = lapply(Jakobsen2025$Z$object, FUN=function(x){x@data[mask,,]})
+modes = Jakobsen2025$Z$modes
+Z_whz = setupCMTFdata(datasets, modes)
+  
+model_bmi1 = acmtfr_opt(Jakobsen2025$Z, Ybmi_cnt, 1, nstart=12, numCores=12, pi=1)
+model_bmi95 = acmtfr_opt(Jakobsen2025$Z, Ybmi_cnt, 1, nstart=12, numCores=12, pi=0.95)
+model_whz95 = acmtfr_opt(Z_whz, Ywhz_cnt, 1, nstart=12, numCores=12, pi=0.95)
 ```
 
 ```{r plot the model}
-a = cbind(model$Fac[[1]], homogenized_subjectMeta) %>% as_tibble() %>% arrange(BMI.group, subject) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`1`,fill=as.factor(BMI.group))) + geom_bar(stat="identity") + theme(legend.position="none")
-b = cbind(model$Fac[[2]], faeces_taxonomy) %>% as_tibble() %>% arrange(V2, V3, V4, V5, V6, V7, V1) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`1`,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position="none")
-c = model$Fac[[3]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line()
-d = cbind(model$Fac[[4]], milk_taxonomy) %>% as_tibble() %>% arrange(V2, V3, V4, V5, V6, V7, V1) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`1`,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position="none")
-e = model$Fac[[5]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line()
-f = cbind(model$Fac[[6]], milkMetab_taxonomy) %>% as_tibble() %>% arrange(X.CAS) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`1`)) + geom_bar(stat="identity") + theme(legend.position="none")
-g = model$Fac[[7]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line()
 
-h = cbind(model$Fac[[1]], homogenized_subjectMeta) %>% as_tibble() %>% arrange(BMI.group, subject) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`2`,fill=as.factor(BMI.group))) + geom_bar(stat="identity") + theme(legend.position="none")
-i = cbind(model$Fac[[2]], faeces_taxonomy) %>% as_tibble() %>% arrange(V2, V3, V4, V5, V6, V7, V1) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`2`,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position="none")
-j = model$Fac[[3]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V2)) + geom_line()
-k = cbind(model$Fac[[4]], milk_taxonomy) %>% as_tibble() %>% arrange(V2, V3, V4, V5, V6, V7, V1) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`2`,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position="none")
-l = model$Fac[[5]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V2)) + geom_line()
-m = cbind(model$Fac[[6]], milkMetab_taxonomy) %>% as_tibble() %>% arrange(X.CAS) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=`2`)) + geom_bar(stat="identity") + theme(legend.position="none")
-n = model$Fac[[7]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V2)) + geom_line()
+plotModel = function(model){
+  a = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,1]) %>% arrange(BMI.group) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(BMI.group))) + geom_bar(stat="identity")
 
-ggarrange(a,b,c,d,e,f,g,h,i,j,k,l,m,n, nrow=2, ncol=7)
+  b = Jakobsen2025$faecal_microbiome_taxonomy %>% mutate(loading = model$Fac[[2]][,1]) %>% arrange(V3) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(V3))) + geom_bar(stat="identity")
+  
+  c = model$Fac[[3]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line() + geom_point()
+  
+  d = Jakobsen2025$milk_microbiome_taxonomy %>% mutate(loading = model$Fac[[4]][,1]) %>% arrange(V3) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(V3))) + geom_bar(stat="identity")
+  
+  e = model$Fac[[5]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line() + geom_point()
+  
+  f = Jakobsen2025$milk_metabolites %>% mutate(loading = model$Fac[[6]][,1]) %>% arrange(X) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading)) + geom_bar(stat="identity")
+  
+  g = model$Fac[[7]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=V1)) + geom_line() + geom_point()
+  
+  h = model$Fac[[8]] %>% as_tibble() %>% mutate(Block = 1:nrow(.)) %>% ggplot(aes(x=Block,y=V1)) + geom_bar(stat="identity") + ylab(expression(lambda))
+  
+  ggarrange(a,b,c,d,e,f,g,h)
+}
 
+plotModel(model_bmi1)
+plotModel(model_bmi95)
+# plotModel(model_whz95)
+
+```
+
+```{r check associations of the subject mode}
+checkAssociations = function(model){
+  a = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,1]) %>% ggplot(aes(x=loading,y=BMI)) + geom_point() + stat_cor()
+  b = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,1]) %>% ggplot(aes(x=as.factor(BMI.group),y=loading)) + geom_boxplot()
+  c = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,1]) %>% ggplot(aes(x=loading,y=whz.6m)) + geom_point() + stat_cor()
+  ggarrange(a,b,c)
+}
+
+checkAssociations(model_bmi1)
+checkAssociations(model_bmi95)
+checkAssociations(model_whz95)
 
 ```
