@@ -1,0 +1,289 @@
+---
+title: "Rasmus"
+output: html_document
+date: "2024-08-22"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(ggpattern)
+library(ggrepel)
+library(stringr)
+library(parafac4microbiome)
+library(CMTFtoolbox)
+```
+
+```{r define colours}
+
+# Old approach
+# Needed colours: BMI groups (3) and phyla levels (6)
+# colours = hue_pal()(9)
+# #show_col(colours)
+# BMI_cols = colours[c(1,4,7)]
+# phylum_cols = colours[-c(1,4,7)]
+
+# Rasmus's suggestion
+colours = RColorBrewer:: brewer.pal(8, "Dark2")
+BMI_cols = c("darkgreen","darkgoldenrod","darkred") #colours[1:3]
+WHZ_cols = c("darkgreen", "darkgoldenrod", "dodgerblue4")
+phylum_cols = colours#[-c(1:3)]
+```
+
+```{r check CV}
+BMI1 = readRDS("./CV_small_BMI_0.5.RDS")
+BMI2 = readRDS("./CV_small_BMI_0.75.RDS")
+BMI3 = readRDS("./CV_small_BMI_0.9.RDS")
+BMI4 = readRDS("./CV_small_BMI_0.95.RDS")
+BMI5 = readRDS("./CV_small_BMI_1.RDS")
+# investigateFMS(lapply(Jakobsen2025$Z$object, FUN=function(x){x@data}), Jakobsen2025$Z$modes, sharedMode=1, numCores=16, method="L-BFGS")
+```
+
+```{r plot the things}
+plotCV = function(result){
+  varExpData = result$varExp
+  RMSEdata = result$RMSE
+  a = varExpData %>%
+    pivot_longer(-numComponents) %>%
+    ggplot(ggplot2::aes(x = numComponents,y = value, col = as.factor(name))) +
+    geom_path() +
+    geom_point() +
+    labs(x="Number of components", y="Variance explained (%)", color="Block") +
+    scale_x_continuous(breaks=varExpData$numComponents)
+  b = RMSEdata %>%
+    ggplot(ggplot2::aes(x = numComponents, y = RMSE)) +
+    geom_path() +
+    geom_point() +
+    labs(x = "Number of components", y = "RMSE") +
+    scale_x_continuous(breaks = RMSEdata$numComponents)
+  ggarrange(a,b)
+}
+
+plotCV(BMI1)
+plotCV(BMI2)
+plotCV(BMI3)
+plotCV(BMI4)
+plotCV(BMI5)
+```
+
+```{r final prep}
+
+Ybmi = Jakobsen2025$homogenizedSubjectMetadata$BMI
+Ybmi_cnt = Ybmi - mean(Ybmi)
+Ybmi_norm = Ybmi_cnt / norm(Ybmi_cnt,"2")
+Ybmi_final = Ybmi_norm * 3
+```
+
+```{r run models}
+model_bmiX_1 = acmtfr_opt(Jakobsen2025$Z, Ybmi_final, 1, nstart=12, numCores=12, pi=1, method="L-BFGS")
+model_bmiX_2 = acmtfr_opt(Jakobsen2025$Z, Ybmi_final, 2, nstart=12, numCores=12, pi=1, method="L-BFGS")
+model_bmi95 = acmtfr_opt(Jakobsen2025$Z, Ybmi_final, 1, nstart=12, numCores=12, pi=0.95, method="L-BFGS")
+model_bmi9 = acmtfr_opt(Jakobsen2025$Z, Ybmi_final, 1, nstart=12, numCores=12, pi=0.9, method="L-BFGS")
+model_bmi75 = acmtfr_opt(Jakobsen2025$Z, Ybmi_final, 1, nstart=12, numCores=12, pi=0.75, method="L-BFGS")
+model_bmi5 = acmtfr_opt(Jakobsen2025$Z, Ybmi_final, 1, nstart=12, numCores=12, pi=0.5, method="L-BFGS")
+```
+
+```{r plot the model}
+
+plotModel = function(model, comp=1){
+  a = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% arrange(BMI.group) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(BMI.group))) + geom_bar(stat="identity") + theme(legend.position = "na") + ylab(paste0("Component ", comp))
+
+  b = abs(model$Fac[[8]][,comp]) %>% as_tibble() %>% mutate(Block = 1:nrow(.)) %>% ggplot(aes(x=Block,y=value)) + geom_bar(stat="identity") + ylab(expression(lambda))
+  
+  c = Jakobsen2025$faecal_microbiome_taxonomy %>% mutate(loading = model$Fac[[2]][,comp]) %>% arrange(V3) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position = "na") + ylab(paste0("Component ", comp))
+  
+  d = model$Fac[[3]][,comp] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=value)) + geom_line() + geom_point() + ylab(paste0("Component ", comp))
+  
+  e = Jakobsen2025$milk_microbiome_taxonomy %>% mutate(loading = model$Fac[[4]][,comp]) %>% arrange(V3) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position = "na") + ylab(paste0("Component ", comp))
+  
+  f = model$Fac[[5]][,comp] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=value)) + geom_line() + geom_point() + ylab(paste0("Component ", comp))
+  
+  g = Jakobsen2025$milk_metabolites %>% mutate(loading = model$Fac[[6]][,comp]) %>% arrange(X) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading)) + geom_bar(stat="identity") + theme(legend.position = "na") + ylab(paste0("Component ", comp))
+  
+  h = model$Fac[[7]][,comp] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=value)) + geom_line() + geom_point() + ylab(paste0("Component ", comp))
+  
+  ggarrange(a,b,c,d,e,f,g,h, nrow=4, ncol=2)
+}
+
+plotModel(model_bmiX_1, 1)
+plotModel(model_bmiX_2, 1)
+plotModel(model_bmiX_2, 2)
+plotModel(model_bmi95, 1)
+plotModel(model_bmi9, 1)
+plotModel(model_bmi75, 1)
+plotModel(model_bmi5, 1)
+
+```
+
+```{r check associations of the subject mode}
+checkAssociations = function(model, comp=1){
+  a = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% ggplot(aes(x=loading,y=BMI)) + geom_point() + stat_cor()
+  b = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% ggplot(aes(x=as.factor(BMI.group),y=loading)) + geom_boxplot()
+  c = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% ggplot(aes(x=loading,y=whz.6m)) + geom_point() + stat_cor()
+  d = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% filter(C.section != "NA") %>% ggplot(aes(x=as.factor(C.section),y=loading)) + geom_boxplot() + stat_compare_means()
+  e = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% filter(Secretor != "NA") %>% ggplot(aes(x=as.factor(Secretor),y=loading)) + geom_boxplot() + stat_compare_means()
+  f = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% filter(Lewis != "NA") %>% ggplot(aes(x=as.factor(Lewis),y=loading)) + geom_boxplot() + stat_compare_means()
+  ggarrange(a,b,c,d,e,f)
+}
+
+checkAssociations(model_bmiX_1, 1)
+checkAssociations(model_bmiX_2, 1)
+checkAssociations(model_bmiX_2, 2)
+checkAssociations(model_bmi95, 1)
+checkAssociations(model_bmi9, 1)
+checkAssociations(model_bmi75, 1)
+checkAssociations(model_bmi5, 1)
+```
+
+```{r check how the scores changed}
+df = cbind(model_bmiX_2$Fac[[1]], model_bmi95$Fac[[1]][,1], model_bmi9$Fac[[1]][,1], model_bmi75$Fac[[1]][,1], -1*model_bmi5$Fac[[1]][,1], Ybmi_final) %>% as_tibble()
+colnames(df) = c("pi1_1", "pi1_2", "pi95", "pi9", "pi75", "pi5", "Y")
+
+df %>% pivot_longer(-Y) %>% ggplot(aes(x=Y,y=value,col=as.factor(name))) + geom_point()
+```
+
+```{r plot the associations}
+# HM metabolome
+df = Jakobsen2025$milk_metabolites %>% mutate(Component_1 = model_bmi95$Fac[[6]][,1])
+colnames(df) = c("Metabolite", "CAS", "Component_1")
+
+metaboliteCategories = read.csv("./Data/Metabolite_categories.txt", sep="\t") %>% as_tibble()
+metaboliteCategories = metaboliteCategories %>% mutate(Metabolite = vctrs::vec_as_names(Metabolite, repair="universal_quiet"))
+df = df %>% left_join(metaboliteCategories)
+
+## Add mismatches by hand
+df[df$Metabolite == "X2.Aminobutyrate","Class"] = "Amino acids and derivatives"
+df[df$Metabolite == "X2.Fucosyllactose","Class"] = "Oligosaccharides"
+df[df$Metabolite == "X2.Hydroxybutyrate","Class"] = "Amino acids and derivatives"
+df[df$Metabolite == "X2.Oxoglutarate","Class"] = "Energy related"
+df[df$Metabolite == "X3.Fucosyllactose","Class"] = "Oligosaccharides"
+df[df$Metabolite == "X3SL.partial","Class"] = "Oligosaccharides"
+df[df$Metabolite == "X6SL.partial","Class"] = "Oligosaccharides"
+df[df$Metabolite == "Methionine","Class"] = "Amino acids and derivatives"
+
+temp = df %>% arrange(Component_1) %>% filter(abs(Component_1) >= 0.1) %>% mutate(index=1:nrow(.))
+a = temp %>% ggplot(aes(x=Component_1,y=as.factor(index),fill=as.factor(Class))) + geom_bar_pattern(stat="identity", pattern_angle=45, pattern_density=0.05, pattern_spacing=0.02, pattern_key_scale_factor=0.6, col="black", pattern_fill="black") + ylab("Metabolite") + xlab("Component 1") + scale_y_discrete(labels=temp$Metabolite) + scale_fill_manual(name="Metabolite class", labels=c("Amino acids and derivatives", "Energy related", "Fatty acids and derivatives", "Food derived", "Microbially derived", "Oligosaccharides", "Pharmaceuticals", "Sugars"), values=phylum_cols) + theme(legend.position="none") + ylab("")
+
+
+####
+
+# Milk microbiome
+df = Jakobsen2025$milk_microbiome_taxonomy %>% mutate(Component_1 = model_bmi95$Fac[[4]][,1]) %>% select(V3,V7,V8,Component_1)
+colnames(df) = c("Phylum", "Genus", "Species", "Component_1")
+temp = df %>% 
+  arrange(Component_1) %>% 
+  mutate(Genus = gsub("g__", "", Genus), Species = gsub("s__", "", Species)) %>% 
+  mutate(Species = str_split_fixed(Species, "_", 2)[,2]) %>% 
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "sp."), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "organism"), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "bacterium"), "", .x)))
+
+temp[temp$Species == "", "Species"] = "sp."
+temp$name = paste0(temp$Genus, " ", temp$Species)
+temp[temp$name == " sp.", "name"] = "Unclassified"
+temp = temp %>% filter(abs(Component_1) >= 0.1) %>% arrange(Component_1) %>% mutate(index=1:nrow(.))
+
+b=temp %>% ggplot(aes(x=Component_1,y=as.factor(index),fill=as.factor(Phylum))) + geom_bar(stat="identity", col="black") + ylab("zOTU") + xlab("Component 1") + scale_y_discrete(labels=temp$name) + scale_fill_manual(name="Phylum", labels=c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria"), values=phylum_cols[-3]) + theme(legend.position="none", axis.text.y = element_text(face="italic")) + ylab("")
+
+# Faecal microbiome
+df = Jakobsen2025$faecal_microbiome_taxonomy %>% mutate(Component_1 = model_bmi95$Fac[[2]][,1]) %>% select(V3,V7,V8,Component_1)
+colnames(df) = c("Phylum", "Genus", "Species", "Component_1")
+temp = df %>% 
+  arrange(Component_1) %>% 
+  mutate(Genus = gsub("g__", "", Genus), Species = gsub("s__", "", Species)) %>% 
+  mutate(Species = str_split_fixed(Species, "_", 2)[,2]) %>% 
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "sp."), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "organism"), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "bacterium"), "", .x)))
+
+temp[temp$Species == "", "Species"] = "sp."
+temp$name = paste0(temp$Genus, " ", temp$Species)
+temp[temp$name == " sp.", "name"] = "Unclassified"
+temp = temp %>% filter(abs(Component_1) >= 0.1) %>% arrange(Component_1) %>% mutate(index=1:nrow(.))
+
+c=temp %>% ggplot(aes(x=Component_1,y=as.factor(index),fill=as.factor(Phylum))) + geom_bar(stat="identity", col="black") + ylab("zOTU") + xlab("Component 1") + scale_y_discrete(labels=temp$name) + scale_fill_manual(name="Phylum", labels=c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria"), values=phylum_cols[-3]) + theme(legend.position="none", axis.text.y = element_text(face="italic")) + ylab("")
+
+a
+b
+c
+```
+```{r loading loading plots}
+
+# Faeces
+NPLS_faeces = read.csv("./Data/NPLS_faeces_loadings.csv",header=FALSE) %>% as_tibble()
+colnames(NPLS_faeces) = c("NPLS", "OTU", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+ACMTFR_faeces = cbind(-1*model_bmi95$Fac[[2]][,1], Jakobsen2025$faecal_microbiome_taxonomy) %>% as_tibble()
+colnames(ACMTFR_faeces) = c("ACMTFR", "OTU", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+
+df = ACMTFR_faeces %>% left_join(NPLS_faeces)
+  
+temp = df %>% 
+mutate(Genus = gsub("g__", "", Genus), Species = gsub("s__", "", Species)) %>% 
+mutate(Species = str_split_fixed(Species, "_", 2)[,2]) %>% 
+mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "sp."), "", .x))) %>%
+mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "organism"), "", .x))) %>%
+mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "bacterium"), "", .x)))
+
+temp[temp$Species == "", "Species"] = "sp."
+temp$name = paste0(temp$Genus, " ", temp$Species)
+temp[temp$name == " sp.", "name"] = "Unclassified"
+
+a = temp %>%
+  ggplot(aes(x=ACMTFR,y=NPLS,col=as.factor(Phylum),label=name)) +
+  geom_point() +
+  # geom_text_repel(max.overlaps=10) +
+  theme(legend.position="na")
+
+# Milk
+NPLS_milk = read.csv("./Data/NPLS_milk_loadings.csv",header=FALSE) %>% as_tibble()
+colnames(NPLS_milk) = c("NPLS", "OTU", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+ACMTFR_milk = cbind(model_bmi95$Fac[[4]][,1], Jakobsen2025$milk_microbiome_taxonomy) %>% as_tibble()
+colnames(ACMTFR_milk) = c("ACMTFR", "OTU", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+
+df = ACMTFR_milk %>% left_join(NPLS_milk)
+  
+temp = df %>% 
+mutate(Genus = gsub("g__", "", Genus), Species = gsub("s__", "", Species)) %>% 
+mutate(Species = str_split_fixed(Species, "_", 2)[,2]) %>% 
+mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "sp."), "", .x))) %>%
+mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "organism"), "", .x))) %>%
+mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "bacterium"), "", .x)))
+
+temp[temp$Species == "", "Species"] = "sp."
+temp$name = paste0(temp$Genus, " ", temp$Species)
+temp[temp$name == " sp.", "name"] = "Unclassified"
+
+b = temp %>%
+  ggplot(aes(x=ACMTFR,y=NPLS,col=as.factor(Phylum),label=name)) +
+  geom_point() +
+  # geom_text_repel(max.overlaps=10) +
+  theme(legend.position="na")
+
+# Milk metab
+NPLS_milkMetab = read.csv("./Data/NPLS_milkMetab_loadings.csv", header=FALSE) %>% as_tibble()
+colnames(NPLS_milkMetab) = c("NPLS", "Metabolite", "CAS")
+ACMTFR_milkMetab = cbind(-1*model_bmi95$Fac[[6]][,1], Jakobsen2025$milk_metabolites) %>% as_tibble()
+colnames(ACMTFR_milkMetab) = c("ACMTFR", "Metabolite", "CAS")
+
+df = ACMTFR_milkMetab %>%
+  left_join(NPLS_milkMetab, by="Metabolite") %>%
+  left_join(metaboliteCategories)
+
+## Add mismatches by hand
+df[df$Metabolite == "X2.Aminobutyrate","Class"] = "Amino acids and derivatives"
+df[df$Metabolite == "X2.Fucosyllactose","Class"] = "Oligosaccharides"
+df[df$Metabolite == "X2.Hydroxybutyrate","Class"] = "Amino acids and derivatives"
+df[df$Metabolite == "X2.Oxoglutarate","Class"] = "Energy related"
+df[df$Metabolite == "X3.Fucosyllactose","Class"] = "Oligosaccharides"
+df[df$Metabolite == "X3SL.partial","Class"] = "Oligosaccharides"
+df[df$Metabolite == "X6SL.partial","Class"] = "Oligosaccharides"
+df[df$Metabolite == "Methionine","Class"] = "Amino acids and derivatives"
+
+c = df %>% 
+  ggplot(aes(x=ACMTFR,y=NPLS,col=as.factor(Class),label=Metabolite)) +
+  geom_point() +
+  # geom_text_repel(max.overlaps=10) +
+  theme(legend.position="na")
+
+ggarrange(a,b,c, nrow=1)
+```

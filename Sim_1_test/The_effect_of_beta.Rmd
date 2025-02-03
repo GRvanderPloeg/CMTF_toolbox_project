@@ -226,7 +226,7 @@ ACMTF_CV_FMS %>%
   ylab("Factor Match Score") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
-ACMTF_CV_FMS %>% select(X1,X2,X3,beta) %>% pivot_longer(-beta) %>% ggplot(aes(x=value)) + facet_grid(vars(beta),vars(name)) + geom_histogram() + ylim(0,1000) + xlab("Factor Match Score") + ylab("Number of models")
+ACMTF_CV_FMS %>% select(X1,X2,X3,beta) %>% pivot_longer(-beta) %>% ggplot(aes(x=value)) + facet_grid(vars(beta),vars(name)) + geom_histogram() + ylim(0,100) + xlab("Factor Match Score") + ylab("Number of models")
 ```
 ```{r plot loss}
 ACMTF_CV_f = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$f}))

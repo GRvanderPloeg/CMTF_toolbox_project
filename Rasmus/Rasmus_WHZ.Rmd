@@ -1,0 +1,118 @@
+---
+title: "Rasmus"
+output: html_document
+date: "2024-08-22"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(stringr)
+library(parafac4microbiome)
+library(CMTFtoolbox)
+```
+
+```{r check CV}
+WHZ1 = readRDS("./CV_small_WHZ_0.5.RDS")
+WHZ2 = readRDS("./CV_small_WHZ_0.75.RDS")
+WHZ3 = readRDS("./CV_small_WHZ_0.9.RDS")
+WHZ4 = readRDS("./CV_small_WHZ_0.95.RDS")
+WHZ5 = readRDS("./CV_small_WHZ_1.RDS")
+
+# For BMI and pi=1: 1 or 4 components
+# For WHZ and pi=1: 1 component
+```
+
+```{r plot the things}
+plotCV = function(result){
+  varExpData = result$varExp
+  RMSEdata = result$RMSE
+  a = varExpData %>%
+    pivot_longer(-numComponents) %>%
+    ggplot(ggplot2::aes(x = numComponents,y = value, col = as.factor(name))) +
+    geom_path() +
+    geom_point() +
+    labs(x="Number of components", y="Variance explained (%)", color="Block") +
+    scale_x_continuous(breaks=varExpData$numComponents)
+  b = RMSEdata %>%
+    ggplot(ggplot2::aes(x = numComponents, y = RMSE)) +
+    geom_path() +
+    geom_point() +
+    labs(x = "Number of components", y = "RMSE") +
+    scale_x_continuous(breaks = RMSEdata$numComponents)
+  ggarrange(a,b)
+}
+
+plotCV(WHZ1)
+plotCV(WHZ2)
+plotCV(WHZ3)
+plotCV(WHZ4)
+plotCV(WHZ5)
+```
+
+```{r final prep}
+
+Ybmi = Jakobsen2025$homogenizedSubjectMetadata$BMI
+Ybmi_cnt = Ybmi - mean(Ybmi)
+Ybmi_norm = Ybmi / norm(Ybmi,"2")
+Ybmi_final = Ybmi_norm * 3
+
+# Re-define Y and Z due to missing WHZ data
+Y = Jakobsen2025$homogenizedSubjectMetadata$whz.6m
+mask = !is.na(Y)
+Ywhz = Y[mask]
+Ywhz_cnt = Ywhz - mean(Ywhz)
+Ywhz_norm = Ywhz / norm(Ywhz, "2")
+Ywhz_final = Ywhz_norm * 3
+
+datasets = lapply(Jakobsen2025$Z$object, FUN=function(x){x@data[mask,,]})
+modes = Jakobsen2025$Z$modes
+Z_whz = setupCMTFdata(datasets, modes)
+```
+
+```{r run models}
+model_bmiX_2 = acmtfr_opt(Z_whz, Ywhz_final, 1, nstart=12, numCores=12, pi=1, method="L-BFGS")
+model_whz95 = acmtfr_opt(Z_whz, Ywhz_final, 1, nstart=12, numCores=12, pi=0.95, method="L-BFGS")
+```
+
+```{r plot the model}
+
+plotModel = function(model, comp=1){
+  a = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% arrange(BMI.group) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(BMI.group))) + geom_bar(stat="identity") + theme(legend.position = "na")
+
+  b = model$Fac[[8]][,comp] %>% as_tibble() %>% mutate(Block = 1:nrow(.)) %>% ggplot(aes(x=Block,y=value)) + geom_bar(stat="identity") + ylab(expression(lambda))
+  
+  c = Jakobsen2025$faecal_microbiome_taxonomy %>% mutate(loading = model$Fac[[2]][,comp]) %>% arrange(V3) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position = "na")
+  
+  d = model$Fac[[3]][,comp] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=value)) + geom_line() + geom_point()
+  
+  e = Jakobsen2025$milk_microbiome_taxonomy %>% mutate(loading = model$Fac[[4]][,comp]) %>% arrange(V3) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading,fill=as.factor(V3))) + geom_bar(stat="identity") + theme(legend.position = "na")
+  
+  f = model$Fac[[5]][,comp] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=value)) + geom_line() + geom_point()
+  
+  g = Jakobsen2025$milk_metabolites %>% mutate(loading = model$Fac[[6]][,comp]) %>% arrange(X) %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=loading)) + geom_bar(stat="identity") + theme(legend.position = "na")
+  
+  h = model$Fac[[7]][,comp] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% ggplot(aes(x=index,y=value)) + geom_line() + geom_point()
+  
+  ggarrange(a,b,c,d,e,f,g,h, nrow=4, ncol=2)
+}
+
+plotModel(model_whz95)
+
+```
+
+```{r check associations of the subject mode}
+checkAssociations = function(model, comp=1){
+  a = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% ggplot(aes(x=loading,y=BMI)) + geom_point() + stat_cor()
+  b = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% ggplot(aes(x=as.factor(BMI.group),y=loading)) + geom_boxplot()
+  c = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% ggplot(aes(x=loading,y=whz.6m)) + geom_point() + stat_cor()
+  d = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% filter(C.section != "NA") %>% ggplot(aes(x=as.factor(C.section),y=loading)) + geom_boxplot() + stat_compare_means()
+  e = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% filter(Secretor != "NA") %>% ggplot(aes(x=as.factor(Secretor),y=loading)) + geom_boxplot() + stat_compare_means()
+  f = Jakobsen2025$homogenizedSubjectMetadata %>% mutate(loading = model$Fac[[1]][,comp]) %>% filter(Lewis != "NA") %>% ggplot(aes(x=as.factor(Lewis),y=loading)) + geom_boxplot() + stat_compare_means()
+  ggarrange(a,b,c,d,e,f)
+}
+
+checkAssociations(model_bmiX_1, 1)
+checkAssociations(model_bmiX_2, 1)
+checkAssociations(model_bmiX_2, 2)
+```

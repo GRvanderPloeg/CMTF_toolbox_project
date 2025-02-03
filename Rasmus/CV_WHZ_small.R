@@ -14,6 +14,8 @@ for(i in 1:length(pi_values)){
   mask = !is.na(Y)
   Y = Y[mask]
   Ycnt = Y - mean(Y)
+  Ynorm = Ycnt / norm(Ycnt, "2")
+  Yfinal = Ynorm * 3
 
   datasets = lapply(Jakobsen2025$Z$object, FUN=function(x){x@data[mask,,]})
   datasets = lapply(datasets, parafac4microbiome::multiwayCenter)
@@ -21,7 +23,7 @@ for(i in 1:length(pi_values)){
   modes = Jakobsen2025$Z$modes
   Z = setupCMTFdata(datasets, modes, normalize=TRUE)
 
-  result = ncrossreg(Z, Ycnt, maxNumComponents=5, pi=pi, nstart=10, numCores=parallel::detectCores(), method="L-BFGS", cvFolds=10)
+  result = ncrossreg(Z, Yfinal, maxNumComponents=5, pi=pi, nstart=10, numCores=parallel::detectCores(), method="L-BFGS", cvFolds=10)
   saveRDS(result, paste0("./CV_small_WHZ_", pi, ".RDS"))
 }
 
