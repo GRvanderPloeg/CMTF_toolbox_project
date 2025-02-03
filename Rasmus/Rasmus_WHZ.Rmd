@@ -71,7 +71,7 @@ Z_whz = setupCMTFdata(datasets, modes)
 ```
 
 ```{r run models}
-model_bmiX_2 = acmtfr_opt(Z_whz, Ywhz_final, 1, nstart=12, numCores=12, pi=1, method="L-BFGS")
+model_whz1 = acmtfr_opt(Z_whz, Ywhz_final, 1, nstart=12, numCores=12, pi=1, method="L-BFGS")
 model_whz95 = acmtfr_opt(Z_whz, Ywhz_final, 1, nstart=12, numCores=12, pi=0.95, method="L-BFGS")
 ```
 
