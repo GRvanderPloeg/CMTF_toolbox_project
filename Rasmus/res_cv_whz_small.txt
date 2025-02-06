@@ -1,4 +1,4 @@
-Mon Feb  3 09:49:21 CET 2025
+Wed Feb  5 21:10:20 CET 2025
 ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
 ✔ dplyr     1.1.4     ✔ readr     2.1.5
 ✔ forcats   1.0.0     ✔ stringr   1.5.1
@@ -16,9 +16,130 @@ The following objects are masked from ‘package:parafac4microbiome’:
 
     fac_to_vect, reinflateFac, reinflateTensor, vect_to_fac
 
+[1] 0.25
+$varExp
+# A tibble: 5 × 5
+  numComponents      X1          X2           X3     Y
+          <dbl>   <dbl>       <dbl>        <dbl> <dbl>
+1             1  0.379  -0.00000247 -0.000000133  100.
+2             2  0.0408 -0.0184      0.608        100.
+3             3 15.1     9.69        2.83         100.
+4             4 16.3    11.8        11.6          100.
+5             5 16.7    12.4        19.3          100.
+
+$RMSE
+# A tibble: 5 × 2
+  numComponents  RMSE
+          <int> <dbl>
+1             1  2.24
+2             2  3.55
+3             3  7.46
+4             4  6.35
+5             5  8.07
+
 [1] 0.5
+$varExp
+# A tibble: 5 × 5
+  numComponents     X1     X2     X3     Y
+          <dbl>  <dbl>  <dbl>  <dbl> <dbl>
+1             1  0.491  0.196  0.490  100.
+2             2  8.91   7.72   2.66   100.
+3             3 12.9   10.2    7.33   100.
+4             4 15.8   12.2   13.3    100.
+5             5 19.5   12.8   17.3    100.
+
+$RMSE
+# A tibble: 5 × 2
+  numComponents  RMSE
+          <int> <dbl>
+1             1  2.25
+2             2  3.16
+3             3  7.92
+4             4  5.92
+5             5 11.3 
+
 [1] 0.75
+$varExp
+# A tibble: 5 × 5
+  numComponents     X1     X2     X3     Y
+          <dbl>  <dbl>  <dbl>  <dbl> <dbl>
+1             1  0.491  0.208  0.492  100.
+2             2  8.94   7.78   2.55   100.
+3             3 15.6   11.5    2.42   100.
+4             4 16.5   12.1   13.6    100.
+5             5 19.5   13.4   19.0    100.
+
+$RMSE
+# A tibble: 5 × 2
+  numComponents  RMSE
+          <int> <dbl>
+1             1  2.28
+2             2  2.99
+3             3  9.64
+4             4  6.60
+5             5 43.4 
+
 [1] 0.9
+$varExp
+# A tibble: 5 × 5
+  numComponents     X1     X2     X3     Y
+          <dbl>  <dbl>  <dbl>  <dbl> <dbl>
+1             1  0.492  0.209  0.492  100.
+2             2  9.19   7.60   2.74   100.
+3             3 14.8   10.8    6.93   100.
+4             4 16.8   12.9   13.8    100.
+5             5 19.8   13.0   18.5    100.
+
+$RMSE
+# A tibble: 5 × 2
+  numComponents  RMSE
+          <int> <dbl>
+1             1  1.19
+2             2  2.56
+3             3  7.28
+4             4  6.01
+5             5  9.75
+
 [1] 0.95
+$varExp
+# A tibble: 5 × 5
+  numComponents     X1     X2     X3     Y
+          <dbl>  <dbl>  <dbl>  <dbl> <dbl>
+1             1  0.494  0.209  0.494  100.
+2             2  9.20   7.60   2.74   100.
+3             3 15.5   10.5    6.38   100.
+4             4 17.6   12.4   13.6    100.
+5             5 19.2   16.0   17.6    100.
+
+$RMSE
+# A tibble: 5 × 2
+  numComponents  RMSE
+          <int> <dbl>
+1             1  1.15
+2             2  1.15
+3             3  1.23
+4             4  1.41
+5             5  4.51
+
 [1] 1
-Mon Feb  3 12:47:33 CET 2025
+$varExp
+# A tibble: 5 × 5
+  numComponents    X1    X2    X3       Y
+          <dbl> <dbl> <dbl> <dbl>   <dbl>
+1             1  7.67  7.50  2.24 0.00572
+2             2 12.6  10.3   6.95 0.418  
+3             3 16.4  12.4  13.0  0.449  
+4             4 19.0  15.7  16.6  3.80   
+5             5 20.6  17.6  21.7  3.82   
+
+$RMSE
+# A tibble: 5 × 2
+  numComponents  RMSE
+          <int> <dbl>
+1             1  1.14
+2             2  1.14
+3             3  1.16
+4             4  1.16
+5             5  1.16
+
+Wed Feb  5 23:44:00 CET 2025
