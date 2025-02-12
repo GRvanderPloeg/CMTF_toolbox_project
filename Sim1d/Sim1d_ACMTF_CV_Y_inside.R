@@ -9,22 +9,22 @@ library(foreach)
 
 set.seed(123)
 
-numSubjects = c(50, 200, 500)
-numFeatures = c(100, 1000)
-numTimepoints = c(10, 50, 100)
+numSubjects = 50
+numFeatures = c(30, 100, 250, 500, 750, 1000)
+numTimepoints = 40
 betas = c(1e-4, 1e-3, 1e-2, 5e-2, 1e-1)
 l = list("numSubjects"=numSubjects, "numFeatures"=numFeatures, "numTimepoints"=numTimepoints, "beta"=betas)
 simSettings = do.call(expand.grid, l)
-simSettings = do.call(rbind, replicate(50, simSettings, simplify=FALSE))
+simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
 
 # Run model
 cl = parallel::makeCluster(parallel::detectCores(), outfile="debug.txt")
 doParallel::registerDoParallel(cl)
 models = foreach::foreach(i=1:nrow(simSettings)) %dopar% {
 
-  numSubjects = simSettings[i,1]
+  # numSubjects = simSettings[i,1]
   numFeatures = simSettings[i,2]
-  numTimepoints = simSettings[i,3]
+  # numTimepoints = simSettings[i,3]
   beta = simSettings[i,4]
 
   # Load data
