@@ -31,10 +31,10 @@ phylum_cols = colours#[-c(1:3)]
 ```
 
 ```{r check CV}
-# WHZ1 = readRDS("./CV_WHZ_0.25.RDS")
-# WHZ2 = readRDS("./CV_WHZ_0.5.RDS")
-# WHZ3 = readRDS("./CV_WHZ_0.75.RDS")
-# WHZ4 = readRDS("./CV_WHZ_0.9.RDS")
+WHZ1 = readRDS("./CV_WHZ_0.25.RDS")
+WHZ2 = readRDS("./CV_WHZ_0.5.RDS")
+WHZ3 = readRDS("./CV_WHZ_0.75.RDS")
+WHZ4 = readRDS("./CV_WHZ_0.9.RDS")
 # WHZ5 = readRDS("./CV_WHZ_0.95.RDS")
 # WHZ6 = readRDS("./CV_WHZ_1.RDS")
 
@@ -99,10 +99,10 @@ plotCV_old = function(result){
   ggarrange(a,b)
 }
 
-# plotCV(WHZ1)
-# plotCV(WHZ2)
-# plotCV(WHZ3)
-# plotCV(WHZ4)
+plotCV(WHZ1)
+plotCV(WHZ2)
+plotCV(WHZ3)
+plotCV(WHZ4)
 # plotCV(WHZ5)
 # plotCV(WHZ6)
 
