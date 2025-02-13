@@ -45,7 +45,7 @@ BMI1 = readRDS("./CV_BMI_0.25.RDS")
 BMI2 = readRDS("./CV_BMI_0.5.RDS")
 BMI3 = readRDS("./CV_BMI_0.75.RDS")
 BMI4 = readRDS("./CV_BMI_0.9.RDS")
-# BMI5 = readRDS("./CV_BMI_0.95.RDS")
+BMI5 = readRDS("./CV_BMI_0.95.RDS")
 # BMI6 = readRDS("./CV_BMI_1.RDS")
 
 # investigateFMS(lapply(Jakobsen2025$Z$object, FUN=function(x){x@data}), Jakobsen2025$Z$modes, sharedMode=1, numCores=16, method="L-BFGS")
@@ -113,7 +113,7 @@ plotCV(BMI1)
 plotCV(BMI2)
 plotCV(BMI3)
 plotCV(BMI4)
-# plotCV(BMI5)
+plotCV(BMI5)
 # plotCV(BMI6)
 ```
 ```{r find acmtf model}
