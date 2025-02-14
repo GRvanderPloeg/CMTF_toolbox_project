@@ -215,7 +215,7 @@ df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y
 
 df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
 
-bestIndex = 60
+bestIndex = 74
 model_bmi90 = ACMTFR_models[[bestIndex]]
 ```
 
@@ -235,7 +235,7 @@ df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y
 
 df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
 
-bestIndex = 65
+bestIndex = 7
 model_bmi95 = ACMTFR_models[[bestIndex]]
 ```
 
@@ -340,14 +340,10 @@ plotModel(model_bmi75, 1)
 
 plotModel(model_bmi90, 1)
 plotModel(model_bmi90, 2)
-plotModel(model_bmi90, 3)
-plotModel(model_bmi90, 4)
 
 plotModel(model_bmi95, 1)
 plotModel(model_bmi95, 2)
 plotModel(model_bmi95, 3)
-plotModel(model_bmi95, 4)
-plotModel(model_bmi95, 5)
 ```
 
 ```{r check associations of the subject mode}
@@ -489,6 +485,7 @@ cbind(model_bmi25$Yhat, model_bmi50$Yhat, model_bmi75$Yhat, model_bmi90$Yhat, mo
   ylab("Yhat") +
   scale_color_manual(name="Model", labels=c("ACMTF-R (pi=0.25)", "ACMTF-R (pi=0.50)", "ACMTF-R (pi=0.75)", "ACMTF-R (pi=0.90)", "ACMTF-R (pi=0.95)"), values=hue_pal()(5))
 ```
+
 ```{r comparisons of factors}
 tucker_congruence <- function(x, y, ignore_sign = TRUE) {
   # x, y are numeric vectors of the same length
@@ -516,12 +513,12 @@ tucker_congruence <- function(x, y, ignore_sign = TRUE) {
 ```
 
 ```{r plot lambdas per model}
-methods = c("pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.90 (3)","pi=0.90 (4)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=0.95 (4)","pi=0.95 (5)", "pi=1 (1)", "pi=1 (2)")
+methods = c("pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=1 (1)", "pi=1 (2)")
 
 cbind(model_bmi25$Fac[[8]], model_bmi50$Fac[[8]], model_bmi75$Fac[[8]], model_bmi90$Fac[[8]], model_bmi95$Fac[[8]], model_bmiX_2$Fac[[8]]) %>%
   t() %>%
   as_tibble() %>%
-  mutate(model=1:14) %>%
+  mutate(model=1:10) %>%
   pivot_longer(-model) %>% 
   mutate(value=abs(value)) %>%
   ggplot(aes(x=as.factor(model),y=value,fill=as.factor(name))) +
@@ -530,7 +527,7 @@ cbind(model_bmi25$Fac[[8]], model_bmi50$Fac[[8]], model_bmi75$Fac[[8]], model_bm
   ylab("Lambda") +
   scale_x_discrete(name="", labels=methods) +
   scale_fill_manual(name="Block", labels=c("Infant faecal microbiome", "HM microbiome", "HM metabolome"), values=hue_pal()(3)) +
-  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), text=element_text(size=16))
 ```
 
 ```{r tucker congruence for infant faecal microbiome}
@@ -546,19 +543,19 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.90 (3)","pi=0.90 (4)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=0.95 (4)","pi=0.95 (5)", "pi=1 (1)", "pi=1 (2)")
+methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
-  mutate(index=1:15) %>%
+  mutate(index=1:11) %>%
   pivot_longer(-index) %>%
-  mutate(name = factor(name, levels=paste0("V",1:15))) %>%
+  mutate(name = factor(name, levels=paste0("V",1:11))) %>%
   ggplot(aes(x=as.factor(index),y=name,fill=value)) +
-  geom_tile() +
+  geom_tile(col="black") +
   # geom_text(aes(label=round(value,2))) +
   scale_y_discrete(name="", labels=methods) +
   scale_x_discrete(name="",labels=methods) +
-  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), text=element_text(size=16))
 ```
 ```{r tucker congruence for HM microbiome}
 NPLS_faeces_mode2 = read.csv("./Data/NPLS_milk_bmi_mode2.csv", header=FALSE) %>% as_tibble()
@@ -573,19 +570,19 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.90 (3)","pi=0.90 (4)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=0.95 (4)","pi=0.95 (5)", "pi=1 (1)", "pi=1 (2)")
+methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
-  mutate(index=1:15) %>%
+  mutate(index=1:11) %>%
   pivot_longer(-index) %>%
-  mutate(name = factor(name, levels=paste0("V",1:15))) %>%
+  mutate(name = factor(name, levels=paste0("V",1:11))) %>%
   ggplot(aes(x=as.factor(index),y=name,fill=value)) +
-  geom_tile() +
+  geom_tile(col="black") +
   # geom_text(aes(label=round(value,2))) +
   scale_y_discrete(name="", labels=methods) +
   scale_x_discrete(name="",labels=methods) +
-  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), text=element_text(size=16))
 ```
 
 ```{r tucker congruence for HM metabolome}
@@ -601,19 +598,19 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.90 (3)","pi=0.90 (4)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=0.95 (4)","pi=0.95 (5)", "pi=1 (1)", "pi=1 (2)")
+methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
-  mutate(index=1:15) %>%
+  mutate(index=1:11) %>%
   pivot_longer(-index) %>%
-  mutate(name = factor(name, levels=paste0("V",1:15))) %>%
+  mutate(name = factor(name, levels=paste0("V",1:11))) %>%
   ggplot(aes(x=as.factor(index),y=name,fill=value)) +
-  geom_tile() +
+  geom_tile(col="black") +
   # geom_text(aes(label=round(value,2))) +
   scale_y_discrete(name="", labels=methods) +
   scale_x_discrete(name="",labels=methods) +
-  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), text=element_text(size=16))
 ```
 
 ```{r plot the associations}
