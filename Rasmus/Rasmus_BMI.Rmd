@@ -531,9 +531,13 @@ cbind(model_bmi25$Fac[[8]], model_bmi50$Fac[[8]], model_bmi75$Fac[[8]], model_bm
 ```
 
 ```{r tucker congruence for infant faecal microbiome}
-NPLS_faeces_mode2 = read.csv("./Data/NPLS_faeces_bmi_mode2.csv", header=FALSE) %>% as_tibble()
+# NPLS_faeces_mode2 = read.csv("./Data/NPLS_faeces_bmi_mode2.csv", header=FALSE) %>% as_tibble()
 
-df = cbind(NPLS_faeces_mode2$V1, model_bmi25$Fac[[2]], model_bmi50$Fac[[2]], model_bmi75$Fac[[2]], model_bmi90$Fac[[2]], model_bmi95$Fac[[2]], model_bmiX_2$Fac[[2]])
+NPLS_faecal = Jakobsen2025$subjectMeta_BMI %>% left_join(NPLS_faeces_mode1 %>% mutate(subject = as.character(subject))) %>% select(loading) %>% pull()
+NPLS_milk = Jakobsen2025$subjectMeta_BMI %>% left_join(NPLS_milk_mode1 %>% mutate(subject = as.character(subject))) %>% select(loading) %>% pull()
+NPLS_milkMetab = Jakobsen2025$subjectMeta_BMI %>% left_join(NPLS_milkMetab_mode1 %>% mutate(subject = as.character(subject))) %>% select(loading) %>% pull()
+
+df = cbind(NPLS_faecal, NPLS_milk, NPLS_milkMetab, model_bmi25$Fac[[1]], model_bmi50$Fac[[1]], model_bmi75$Fac[[1]], model_bmi90$Fac[[1]], model_bmi95$Fac[[1]], model_bmiX_2$Fac[[1]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 
@@ -543,13 +547,13 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS (1)","pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)", "pi=1 (1)", "pi=1 (2)")
+methods = c("NPLS Faecal (1)", "NPLS Milk (1)", "NPLS MilkMetab (1)", "pi=0.25 (1)","pi=0.50 (1)","pi=0.75 (1)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
-  mutate(index=1:11) %>%
+  mutate(index=1:length(methods)) %>%
   pivot_longer(-index) %>%
-  mutate(name = factor(name, levels=paste0("V",1:11))) %>%
+  mutate(name = factor(name, levels=paste0("V",1:length(methods)))) %>%
   ggplot(aes(x=as.factor(index),y=name,fill=value)) +
   geom_tile(col="black") +
   # geom_text(aes(label=round(value,2))) +
@@ -558,9 +562,9 @@ congruence_matrix %>%
   theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), text=element_text(size=16))
 ```
 ```{r tucker congruence for HM microbiome}
-NPLS_faeces_mode2 = read.csv("./Data/NPLS_milk_bmi_mode2.csv", header=FALSE) %>% as_tibble()
+# NPLS_faeces_mode2 = read.csv("./Data/NPLS_milk_bmi_mode2.csv", header=FALSE) %>% as_tibble()
 
-df = cbind(NPLS_faeces_mode2$V1, model_bmi25$Fac[[4]], model_bmi50$Fac[[4]], model_bmi75$Fac[[4]], model_bmi90$Fac[[4]], model_bmi95$Fac[[4]], model_bmiX_2$Fac[[4]])
+df = cbind(NPLS_faeces_mode1$loading, model_bmi25$Fac[[4]], model_bmi50$Fac[[4]], model_bmi75$Fac[[4]], model_bmi90$Fac[[4]], model_bmi95$Fac[[4]], model_bmiX_2$Fac[[4]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 

@@ -499,9 +499,16 @@ cbind(model_whz25$Fac[[8]], model_whz50$Fac[[8]], model_whz75$Fac[[8]], model_wh
 ```
 
 ```{r tucker congruence for infant faecal microbiome}
-NPLS_faeces_mode2 = read.csv("./Data/NPLS_faeces_whz_mode2.csv", header=FALSE) %>% as_tibble()
+# NPLS_faeces_mode2 = read.csv("./Data/NPLS_faeces_whz_mode2.csv", header=FALSE) %>% as_tibble()
 
-df = cbind(NPLS_faeces_mode2$V1, model_whz25$Fac[[2]], model_whz50$Fac[[2]], model_whz75$Fac[[2]], model_whz90$Fac[[2]], model_whz95$Fac[[2]], model_bmiX_2$Fac[[2]])
+wrangled_acmtf = list()
+wrangled_acmtf$Fac = list()
+temp = Jakobsen2025$subjectMeta_BMI %>% mutate(loading1 = model_bmiX_2$Fac[[1]][,1], loading2 = model_bmiX_2$Fac[[1]][,2])
+wrangled_acmtf$Fac[[1]] = Jakobsen2025$subjectMeta_WHZ %>% left_join(temp) %>% select(loading1, loading2) %>% as.matrix()
+
+NPLS_faeces_whz$Fac[[1]][is.na(NPLS_faeces_whz$Fac[[1]][,1]),] = 0
+
+df = cbind(NPLS_faeces_whz$Fac[[1]], NPLS_milk_whz$Fac[[1]], NPLS_milkMetab_whz$Fac[[1]], model_whz25$Fac[[1]], model_whz50$Fac[[1]], model_whz75$Fac[[1]], model_whz90$Fac[[1]], model_whz95$Fac[[1]], wrangled_acmtf$Fac[[1]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 
@@ -511,13 +518,13 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS (1)","pi=0.25 (1)","pi=0.25 (2)","pi=0.50 (1)","pi=0.50 (2)","pi=0.75 (1)","pi=0.75 (2)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=1 (1)", "pi=1 (2)")
+methods = c("NPLS Faecal (1)", "NPLS Milk (1)", "NPLS MilkMetab (1)", "pi=0.25 (1)","pi=0.25 (2)","pi=0.50 (1)","pi=0.50 (2)","pi=0.75 (1)","pi=0.75 (2)","pi=0.90 (1)","pi=0.90 (2)","pi=0.95 (1)","pi=0.95 (2)","pi=0.95 (3)","pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
-  mutate(index=1:14) %>%
+  mutate(index=1:length(methods)) %>%
   pivot_longer(-index) %>%
-  mutate(name = factor(name, levels=paste0("V",1:14))) %>%
+  mutate(name = factor(name, levels=paste0("V",1:length(methods)))) %>%
   ggplot(aes(x=as.factor(index),y=name,fill=value)) +
   geom_tile(col="black") +
   # geom_text(aes(label=round(value,2))) +
