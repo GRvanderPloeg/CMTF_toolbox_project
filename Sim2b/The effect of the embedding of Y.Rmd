@@ -15,61 +15,99 @@ library(scales)
 library(clue)
 ```
 
-```{r define FMS}
-
-calculateFMS <- function(modelFac, realFac, numComponents) {
+```{r model evaluation function}
+modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1),nrow=3,ncol=7)){
   
-  # Project modelFac onto realFac to make sure components are not split
-  # modelFac = modelFac %*% pracma::pinv(t(modelFac) %*% modelFac) %*% t(modelFac) %*% realFac
+  # FMS
+  FMS1 = calculateFMS(modelFac[[1]], realFac[[1]])
+  FMS2 = calculateFMS(modelFac[[2]], realFac[[2]])
+  FMS3 = calculateFMS(modelFac[[3]], realFac[[3]])
+  FMS4 = calculateFMS(modelFac[[4]], realFac[[4]])
+  FMS5 = calculateFMS(modelFac[[5]], realFac[[5]])
+  FMS6 = calculateFMS(modelFac[[6]], realFac[[6]])
+  FMS7 = calculateFMS(modelFac[[7]], realFac[[7]])
   
-  # Create a similarity matrix for the pairwise comparison
-  similarity_matrix <- matrix(0, nrow = ncol(modelFac), ncol = ncol(modelFac))
+  # Repair the distinct components to appear in the correct column
+  FMS2 = cbind(FMS2, matrix(rnorm(7*2), nrow=7, ncol=2))
+  FMS3 = cbind(FMS3, matrix(rnorm(7*2), nrow=7, ncol=2))
+  FMS4 = cbind(FMS4[,1:4], rnorm(7), FMS4[,5], rnorm(7))
+  FMS5 = cbind(FMS5[,1:4], rnorm(7), FMS5[,5], rnorm(7))
+  FMS6 = cbind(FMS6[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS6[,3])
+  FMS7 = cbind(FMS7[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS7[,3])
   
-  # Compute pairwise cosine similarity across all modes
-  for (k in 1:ncol(modelFac)) {
-    for (l in 1:ncol(realFac)) {
-      vect1 <- as.matrix(modelFac[, k])
-      vect2 <- as.matrix(realFac[, l])
-      
-      # Cosine similarity
-      similarity_matrix[k, l] <- abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
-    }
-  }
-  
-  # Use Hungarian algorithm to find the best matching
-  assignment <- clue::solve_LSAP(similarity_matrix, maximum = TRUE)
-  
-  # Permute columns in the model to fit the input components
-  # modelFac_perm <- modelFac[,assignment]
-  
-  # Calculate FMS based on the best matching
-  FMS <- sum(similarity_matrix[cbind(seq_along(assignment), assignment)])
-  
-  # Average over the number of components
-  FMS <- FMS / numComponents
-  return(FMS)
-}
-
-```
-
-```{r lambda similarity function}
-lambdaSimilarityIndex = function(lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1), nrow=3, ncol=7)){
+  # LSI
   lambda_hat = abs(lambda_hat)
-  similarity_matrix = matrix(NA, nrow=7, ncol=7)
-  for(i in 1:7){
-    for(j in 1:7){
-      real = lambda_true[,i]
-      hat = lambda_hat[,j]
-      similarity_matrix[i,j] = sum((real - hat)^2)
-    }
-  }
+  LSI = calculateLSI(lambda_hat, lambda_true)
   
-  mapping = clue::solve_LSAP(similarity_matrix)
+  # Combine similarity matrices equally
+  similarityMatrix = (FMS1 + LSI)/2
+  
+  # Find best combination
+  mapping = clue::solve_LSAP(similarityMatrix, maximum=TRUE)
+  
+  # Return metrics
+  mappingMatrix = cbind(seq_along(mapping), mapping)
+  
+  mappingMatrix1 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,4,5),]
+  mappingMatrix2 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,4,6),]
+  mappingMatrix3 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,7),]
+
+  FMS1 = (sum(FMS1[mappingMatrix])) / 7
+  FMS2 = (sum(FMS2[mappingMatrix1])) / 5
+  FMS3 = (sum(FMS3[mappingMatrix1])) / 5
+  FMS4 = (sum(FMS4[mappingMatrix2])) / 5
+  FMS5 = (sum(FMS5[mappingMatrix2])) / 5
+  FMS6 = (sum(FMS6[mappingMatrix3])) / 3
+  FMS7 = (sum(FMS7[mappingMatrix3])) / 3
+
+  FMS_overall = FMS1 * FMS2 * FMS3 * FMS4 * FMS5 * FMS6 * FMS7
+  
   lambda_hat_perm = lambda_hat[,mapping]
   SSR = sum((lambda_true - lambda_hat_perm)^2)
-  
   LSI = 1 / (1 + SSR)
-  return(LSI)
+  
+  result = list("FMS"=FMS_overall,
+                "FMS1"=FMS1,
+                "FMS2"=FMS2,
+                "FMS3"=FMS3,
+                "FMS4"=FMS4,
+                "FMS5"=FMS5,
+                "FMS6"=FMS6,
+                "FMS7"=FMS7,
+                "LSI"=LSI)
+  return(result)
+}
+
+calculateFMS = function(modelFac, realFac){
+  
+  similarityMatrix = matrix(0, nrow = ncol(modelFac), ncol = ncol(realFac))
+  
+  for (k in 1:ncol(modelFac)) {
+    for (l in 1:ncol(realFac)) {
+      vect1 = as.matrix(modelFac[, k])
+      vect2 = as.matrix(realFac[, l])
+      
+      # Cosine similarity
+      similarityMatrix[k, l] = abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+
+calculateLSI = function(lambda_hat, lambda_true){
+
+  similarityMatrix = matrix(NA, nrow=7, ncol=7)
+  
+  for(k in 1:7){
+    for(l in 1:7){
+      real = lambda_true[,k]
+      hat = lambda_hat[,l]
+      similarityMatrix[k,l] = 1 / (1 + sum((real - hat)^2))
+    }
+  }
+  
+  return(similarityMatrix)
 }
 ```
 
@@ -135,9 +173,12 @@ ACMTF_CV_varExps %>%
   ylim(0,100) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
+```{r calculate model metrics}
+result = lapply(ACMTFR_CV_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadingsFac, x$Fac[[8]])})
+```
 
 ```{r plot lambda similarity}
-ACMTF_CV_lambda_similarity = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){lambdaSimilarityIndex(x$Fac[[8]])}))
+ACMTF_CV_lambda_similarity = do.call(rbind, lapply(result, FUN=function(x){x$LSI}))
 ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(pi = ACMTFR_CV_params[,2], embedding = ACMTFR_CV_params[,1], index=1:nrow(.))
 
 ACMTF_CV_lambda_similarity %>% ggplot(aes(x=as.factor(pi),y=V1)) + facet_wrap(~embedding) + geom_boxplot() + scale_y_log10()
@@ -166,13 +207,13 @@ c=ACMTFR_CV_models[[143]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %
 ggarrange(a,b,c)
 ```
 ```{r plot fms}
-ACMTF_CV_FMS1 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
-ACMTF_CV_FMS2 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
-ACMTF_CV_FMS3 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
-ACMTF_CV_FMS4 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
-ACMTF_CV_FMS5 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
-ACMTF_CV_FMS6 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
-ACMTF_CV_FMS7 = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+ACMTF_CV_FMS1 = do.call(rbind, lapply(result, FUN=function(x){x$FMS1})) %>% as_tibble()
+ACMTF_CV_FMS2 = do.call(rbind, lapply(result, FUN=function(x){x$FMS2})) %>% as_tibble()
+ACMTF_CV_FMS3 = do.call(rbind, lapply(result, FUN=function(x){x$FMS3})) %>% as_tibble()
+ACMTF_CV_FMS4 = do.call(rbind, lapply(result, FUN=function(x){x$FMS4})) %>% as_tibble()
+ACMTF_CV_FMS5 = do.call(rbind, lapply(result, FUN=function(x){x$FMS5})) %>% as_tibble()
+ACMTF_CV_FMS6 = do.call(rbind, lapply(result, FUN=function(x){x$FMS6})) %>% as_tibble()
+ACMTF_CV_FMS7 = do.call(rbind, lapply(result, FUN=function(x){x$FMS7})) %>% as_tibble()
 
 ACMTF_CV_FMS = cbind(ACMTF_CV_FMS1, ACMTF_CV_FMS2, ACMTF_CV_FMS3, ACMTF_CV_FMS4, ACMTF_CV_FMS5, ACMTF_CV_FMS6, ACMTF_CV_FMS7)
 colnames(ACMTF_CV_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
