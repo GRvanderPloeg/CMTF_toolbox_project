@@ -12,6 +12,7 @@ library(ggpattern)
 library(ggrepel)
 library(stringr)
 library(parafac4microbiome)
+library(NPLStoolbox)
 library(CMTFtoolbox)
 library(scales)
 library(vegan)
@@ -31,6 +32,35 @@ colours = RColorBrewer:: brewer.pal(8, "Dark2")
 BMI_cols = c("darkgreen","darkgoldenrod","darkred") #colours[1:3]
 WHZ_cols = c("darkgreen", "darkgoldenrod", "dodgerblue4")
 phylum_cols = colours
+```
+
+```{r process and homogenize data}
+df = c(NPLStoolbox::Jakobsen2025$faeces$mode1$subject, NPLStoolbox::Jakobsen2025$milkMicrobiome$mode1$subject, NPLStoolbox::Jakobsen2025$milkMetabolomics$mode1$subject) %>% table() %>% as_tibble() %>% filter(n==3)
+homogenizedSamples = df[df$n == 3,1] %>% pull()
+
+# Faeces
+newFaeces = NPLStoolbox::Jakobsen2025$faeces
+
+mask = newFaeces$mode1$subject %in% homogenizedSamples
+newFaeces$data = newFaeces$data[mask,,]
+newFaeces$mode1 = newFaeces$mode1[mask,]
+processedFaeces = parafac4microbiome::processDataCube(newFaeces, sparsityThreshold = 0.75, centerMode=1, scaleMode=2)
+
+# Milk
+newMilk = NPLStoolbox::Jakobsen2025$milkMicrobiome
+
+mask = newMilk$mode1$subject %in% homogenizedSamples
+newMilk$data = newMilk$data[mask,,]
+newMilk$mode1 = newMilk$mode1[mask,]
+processedMilk = parafac4microbiome::processDataCube(newMilk, sparsityThreshold=0.85, centerMode=1, scaleMode=2)
+
+# Milk metab
+newMilkMetab = NPLStoolbox::Jakobsen2025$milkMetabolomics
+
+mask = newMilkMetab$mode1$subject %in% homogenizedSamples
+newMilkMetab$data = newMilkMetab$data[mask,,]
+newMilkMetab$mode1 = newMilkMetab$mode1[mask,]
+processedMilkMetab = parafac4microbiome::processDataCube(newMilkMetab, CLR=FALSE, centerMode=1, scaleMode=2)
 ```
 
 ```{r check CV}
