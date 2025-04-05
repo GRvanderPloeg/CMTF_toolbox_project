@@ -184,20 +184,6 @@ ACMTF_CV_params = readRDS("./Sim1_ACMTF_CV_params_Y_inside.RDS")
 
 # ACMTF CV
 
-```{r briefly check convergence reason}
-what = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$terminate$what}))
-
-cbind(what, ACMTF_CV_params) %>%
-  as_tibble() %>%
-  mutate(beta = as.numeric(ACMTF_CV_params)) %>%
-  select(-ACMTF_CV_params) %>%
-  ggplot(aes(x=as.factor(beta),fill=as.factor(V1))) +
-  geom_bar(col="black") +
-  xlab(expression(beta)) +
-  ylab("Number of models") +
-  scale_fill_manual(name="Reason", labels=c("Absolute loss value", "Maximum number of function evaluations", "Relative change in loss value", "Step tol"), values=hue_pal()(4))
-```
-
 ```{r plot varExps}
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
 ACMTF_CV_varExps = ACMTF_CV_varExps * 100

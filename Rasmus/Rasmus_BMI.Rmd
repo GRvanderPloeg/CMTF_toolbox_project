@@ -69,22 +69,21 @@ Z = setupCMTFdata(datasets, modes, normalize=TRUE)
 ```
 
 ```{r check best pi}
-Y = processedFaeces$mode1$BMI
-Ycnt = Y - mean(Y)
 
-pis = seq(from=0.9, to=1, length.out=11)
-varExpsY = rep(NA, length(pis))
-for(i in 1:length(pis)){
-  pi = pis[i]
-  print(pi)
-  varExpsY[i] = CMTFtoolbox::acmtfr_opt(Z, Ycnt, 1, pi=pi, nstart=12, numCores=12, method="L-BFGS")$varExpY
-}
+CV_pi_models = readRDS("./CV_BMI_pi_models.RDS")
+pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999, 0.9999, 0.99991, 0.99992, 0.99993, 0.99993, 0.99994, 0.99995, 0.99996, 0.99997, 0.99998, 0.99999, 1)
+# varExpsX = do.call(rbind, lapply(CV_pi_models, FUN=function(x){x$varExp}))
+varExpsY = do.call(rbind, lapply(CV_pi_models, FUN=function(x){x$varExpY}))
 
-cbind(pis, varExpsY) %>% ggplot(aes(x=pis,y=varExpsY)) +
+cbind(pis, varExpsY) %>% 
+  as_tibble() %>%
+  ggplot(aes(x=as.factor(pis),y=V2,group=1)) +
+  geom_path() +
   geom_point() +
-  geom_line() +
-  xlab("Pi") +
-  ylab("Variance explained in Y (%)")
+  xlab(expression(pi)) +
+  ylab("Variance explained in Y (%)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
 ```
 
 ```{r check CV}

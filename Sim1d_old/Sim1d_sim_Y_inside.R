@@ -13,7 +13,7 @@ set.seed(123)
 
 # Settings
 Ysize = 1
-noiseOnX = 0.1 # Noise percentage on each X block
+noiseOnX = 0.5 # Noise percentage on each X block
 noiseOnY = 0.1 # Noise percentage on Y
 w_global1 = 1
 w_global2 = 1
@@ -29,16 +29,18 @@ rho3 = 0
 rho4 = 0
 
 # Simulation
-numSubjects = c(50, 200, 500)
-numFeatures = c(100, 1000)
-numTimepoints = c(10, 50, 100)
-l = list("numSubjects"=numSubjects, "numFeatures"=numFeatures, "numTimepoints"=numTimepoints)
-simSettings = do.call(expand.grid, l)
+# numSubjects = c(50, 200, 500)
+numSubjects = 50
+simSettings = c(30, 100, 250, 500, 750, 1000)
+numTimepoints = 40
+# numTimepoints = c(10, 50, 100)
+# l = list("numSubjects"=numSubjects, "numFeatures"=numFeatures, "numTimepoints"=numTimepoints)
+# simSettings = do.call(expand.grid, l)
 
-for(i in 1:nrow(simSettings)){
-  numSubjects = simSettings[i,1]
-  numFeatures = simSettings[i,2]
-  numTimepoints = simSettings[i,3]
+for(i in 1:length(simSettings)){
+  # numSubjects = 50 #simSettings[i,1]
+  numFeatures = simSettings[i] #simSettings[i,2]
+  # numTimepoints = 10 #simSettings[i,3]
 
   # initialize subject loadings
   r = array(rnorm(numSubjects*7), c(numSubjects, 7))

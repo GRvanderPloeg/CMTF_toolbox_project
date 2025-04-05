@@ -4,7 +4,7 @@ library(stringr)
 library(parafac4microbiome)
 library(CMTFtoolbox)
 
-pi_values = c(0.25, 0.5, 0.75, 0.9, 0.95, 1)
+pi_values = c(0.99995, 0.99996, 0.99997, 0.99998, 0.99999, 1)
 for(i in 1:length(pi_values)){
   pi = pi_values[i]
   print(pi)
