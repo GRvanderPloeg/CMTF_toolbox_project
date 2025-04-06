@@ -157,7 +157,7 @@ mize_runner = function(par, fg, max_iter=10000, max_fn=10000, abs_tol=1e-8, rel_
 ```
 
 ```{r load input loadings}
-inputLoadings = readRDS("./Sim1_input_loadings_Y_inside.RDS")
+inputLoadings = readRDS("./Sim6_input_loadings_Y_inside.RDS")
 
 # Reorganize into Fac object
 inputLoadingsFac = inputLoadings
@@ -171,22 +171,22 @@ inputLoadingsFac[[7]] = inputLoadings[[3]][,c(3,6,13)]
 ```
 
 ```{r load datasets}
-X1_final = readRDS("./Sim1_X1_Y_inside.RDS")
-X2_final = readRDS("./Sim1_X2_Y_inside.RDS")
-X3_final = readRDS("./Sim1_X3_Y_inside.RDS")
+X1_final = readRDS("./Sim6_X1_Y_inside.RDS")
+X2_final = readRDS("./Sim6_X2_Y_inside.RDS")
+X3_final = readRDS("./Sim6_X3_Y_inside.RDS")
 ```
 
 # Analyze ACMTF results
 ```{r load ACMTF models}
-ACMTF_CV_models = readRDS("./Sim1_ACMTF_CV_models_Y_inside.RDS")
-ACMTF_CV_params = readRDS("./Sim1_ACMTF_CV_params_Y_inside.RDS")
+ACMTF_CV_models = readRDS("./Sim6_ACMTF_CV_models_Y_inside.RDS")
+ACMTF_CV_params = readRDS("./Sim6_ACMTF_CV_params_Y_inside.RDS")
 ```
 
 # ACMTF CV
 
 ```{r plot varExps}
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
-ACMTF_CV_varExps = ACMTF_CV_varExps * 100
+ACMTF_CV_varExps = ACMTF_CV_varExps
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
 ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
 
