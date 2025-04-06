@@ -195,7 +195,7 @@ cbind(what, ACMTF_CV_params) %>%
   geom_bar(col="black") +
   xlab(expression(beta)) +
   ylab("Number of models") +
-  scale_fill_manual(name="Reason", labels=c("Absolute loss value", "Maximum number of function evaluations", "Relative change in loss value", "Step tol"), values=hue_pal()(4))
+  scale_fill_manual(name="Stopping criterion", labels=c("Absolute loss value", "Maximum number of function evaluations", "Relative change in loss value", "Absolute change in parameter update"), values=hue_pal()(4))
 ```
 
 ```{r plot varExps}
@@ -253,7 +253,7 @@ ggarrange(a,b,c,d)
 ```{r plot of lambda matrix values}
 df = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){max(abs(c(x$Fac[[8]])))})) %>% as_tibble()
 df %>% mutate(beta = ACMTF_CV_params) %>% ggplot(aes(x=V1)) + facet_wrap(~beta) + geom_histogram()
-df %>% mutate(beta = ACMTF_CV_params) %>% ggplot(aes(x=V1)) + facet_wrap(~beta) + geom_histogram() + scale_x_log10() + xlab(paste0("max(",eval(lambda),")"))
+df %>% mutate(beta = ACMTF_CV_params) %>% ggplot(aes(x=V1)) + facet_wrap(~beta) + geom_histogram() + scale_x_log10() + xlab(paste0("max(",eval("lambda"),")"))
 ```
 
 ```{r plot fms}
