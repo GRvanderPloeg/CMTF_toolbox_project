@@ -37,12 +37,12 @@ Y = processedFaeces$mode1$BMI
 Ycnt = Y - mean(Y)
 Ynorm = Ycnt / norm(Ycnt, "2")
 
-pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999, 0.9999, 0.99991, 0.99992, 0.99993, 0.99993, 0.99994, 0.99995, 0.99996, 0.99997, 0.99998, 0.99999, 1)
+pis = c(0.2, 0.5, 0.6, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.875, 0.9, 1)
 models = list()
 for(i in 1:length(pis)){
   pi = pis[i]
   print(pi)
-  models[[i]] = CMTFtoolbox::acmtfr_opt(Z, Ycnt, 1, pi=pi, nstart=100, numCores=parallel::detectCores(), method="L-BFGS")
+  models[[i]] = CMTFtoolbox::acmtfr_opt(Z, Ynorm, 1, pi=pi, nstart=100, numCores=parallel::detectCores(), method="L-BFGS", allOutput=TRUE)
 }
 
 saveRDS(models, "CV_BMI_pi_models.RDS")

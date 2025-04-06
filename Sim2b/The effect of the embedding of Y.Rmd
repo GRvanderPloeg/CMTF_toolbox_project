@@ -144,6 +144,24 @@ simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
 ACMTFR_CV_params = simSettings
 ```
 
+```{r briefly check convergence reason}
+what = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){x$terminate$what}))
+
+df = cbind(what, ACMTFR_CV_params) %>% as_tibble()
+colnames(df) = c("what", "embedding", "pi")
+
+df %>%
+  as_tibble() %>%
+  filter(embedding==0.5) %>%
+  select(-embedding) %>%
+  ggplot(aes(x=as.factor(pi),fill=as.factor(what))) +
+  geom_bar(col="black") +
+  xlab(expression(pi)) +
+  ylab("Number of models") +
+  scale_fill_manual(name="Reason", labels=c("Absolute loss value", "Maximum number of function evaluations", "Relative change in loss value", "Absolute change in parameter update"), values=hue_pal()(4)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
 # ACMTFR
 ```{r plot varExps}
 ACMTF_CV_varExpsX = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){x$varExp})) %>% as_tibble()
@@ -237,6 +255,12 @@ ACMTF_CV_FMS %>%
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 ACMTF_CV_FMS %>% select(X1,X2,X3,pi,embedding) %>% filter(embedding==0.5) %>% select(-embedding) %>% pivot_longer(-pi) %>% ggplot(aes(x=value)) + facet_grid(vars(pi),vars(name)) + geom_histogram() + ylim(0,100) + xlab("Factor Match Score") + ylab("Number of models")
+```
+
+```{r plot iter}
+ACMTF_CV_iter = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){x$iter}))
+ACMTF_CV_iter = ACMTF_CV_iter %>% as_tibble() %>% mutate(pi=ACMTFR_CV_params[,2], embedding=ACMTFR_CV_params[,1], index=1:length(pi))
+
 ```
 
 ```{r plot loss}
