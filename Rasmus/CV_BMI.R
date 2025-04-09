@@ -37,7 +37,7 @@ Y = processedFaeces$mode1$BMI
 Ycnt = Y - mean(Y)
 Ynorm = Ycnt / norm(Ycnt, "2")
 
-pi_values = c(0.99995, 0.99996, 0.99997, 0.99998, 0.99999, 1)
+pi_values = c(0.8, 0.825, 0.85, 0.875, 0.9)
 for(i in 1:length(pi_values)){
   pi = pi_values[i]
   print(pi)

@@ -37,5 +37,5 @@ Y = processedFaeces$mode1$BMI
 Ycnt = Y - mean(Y)
 Ynorm = Ycnt / norm(Ycnt, "2")
 
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=2, pi=1, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
+model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=1, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
 saveRDS(model, "./ACMTF_model.RDS")

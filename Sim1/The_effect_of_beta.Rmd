@@ -324,13 +324,13 @@ componentShapes = componentShapes %>%
   mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>%
   select(beta, Global, Local, Distinct) %>%
   pivot_longer(-beta) %>%
-  mutate(label = "Global (2 components)")
+  mutate(label = "Common (2 components)")
 
 componentShapes[componentShapes$name == "Local", "label"] = "Local (2 components)"
 componentShapes[componentShapes$name == "Distinct", "label"] = "Distinct (3 components)"
 
 componentShapes %>%
-  mutate(name = factor(label, levels=c("Global (2 components)", "Local (2 components)", "Distinct (3 components)"))) %>%
+  mutate(name = factor(label, levels=c("Common (2 components)", "Local (2 components)", "Distinct (3 components)"))) %>%
   ggplot(aes(x=as.factor(beta),fill=as.factor(value))) +
   facet_wrap(~name, nrow=3) +
   geom_bar(col="black") +
