@@ -12,10 +12,10 @@ set.seed(123)
 numSubjects = c(50, 200, 500)
 numFeatures = c(100, 1000)
 numTimepoints = c(10, 50, 100)
-betas = c(1e-4, 1e-3, 1e-2, 5e-2, 1e-1)
+betas = c(1e-5, 1e-4, 1e-3, 1e-2)
 l = list("numSubjects"=numSubjects, "numFeatures"=numFeatures, "numTimepoints"=numTimepoints, "beta"=betas)
 simSettings = do.call(expand.grid, l)
-simSettings = do.call(rbind, replicate(1, simSettings, simplify=FALSE))
+simSettings = do.call(rbind, replicate(100, simSettings, simplify=FALSE))
 
 # Run model
 cl = parallel::makeCluster(parallel::detectCores())

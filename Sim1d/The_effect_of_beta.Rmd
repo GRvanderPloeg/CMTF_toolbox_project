@@ -189,9 +189,9 @@ what = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$terminate$what})
 
 cbind(what, ACMTF_CV_params) %>%
   as_tibble() %>%
-  mutate(beta = as.numeric(ACMTF_CV_params)) %>%
-  select(-ACMTF_CV_params) %>%
-  ggplot(aes(x=as.factor(beta),fill=as.factor(V1))) +
+  mutate(size = paste0(numSubjects,"_",numFeatures,"_",numTimepoints)) %>%
+  ggplot(aes(x=as.factor(size),fill=as.factor(what))) +
+  facet_wrap(~beta) +
   geom_bar(col="black") +
   xlab(expression(beta)) +
   ylab("Number of models") +
@@ -200,20 +200,10 @@ cbind(what, ACMTF_CV_params) %>%
 
 ```{r plot varExps}
 ACMTF_CV_varExps = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){(x$varExp)})) %>% as_tibble()
-ACMTF_CV_varExps = ACMTF_CV_varExps * 100
 colnames(ACMTF_CV_varExps) = c("X1", "X2", "X3")
-ACMTF_CV_varExps = ACMTF_CV_varExps %>% mutate(beta = ACMTF_CV_params)
+ACMTF_CV_varExps = cbind(ACMTF_CV_varExps, ACMTF_CV_params)
 
-ACMTF_CV_varExps %>% 
-    as_tibble() %>%
-    pivot_longer(-beta) %>%
-    ggplot(aes(x=as.factor(beta),y=value)) +
-    facet_wrap(~name, ncol=3) +
-    geom_violin(scale="width") +
-    geom_jitter(width=0.05, size=0.5) +
-    xlab(expression(beta)) +
-    ylab("Variance explained (%)") +
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+ACMTF_CV_varExps %>% as_tibble() %>% mutate(numParams = numSubjects * numFeatures * numTimepoints) %>% select(-numSubjects,-numFeatures,-numTimepoints) %>% pivot_longer(-c(beta,numParams)) %>% ggplot(aes(x=numParams,y=value,fill=as.factor(name))) + facet_wrap(~beta) + geom_point()
 ```
 
 ```{r calculate model metrics}
