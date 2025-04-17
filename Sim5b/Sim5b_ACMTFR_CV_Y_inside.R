@@ -11,7 +11,7 @@ set.seed(123)
 
 # Prepare sim settings
 embeddings = c(1e-4, 1e-3, 1e-2, 0.05, 0.1, 0.25, 0.5, 0.75, 1)
-pis = c(0.2, 0.4, 0.6, 0.8, 1)
+pis = c(0.2, 0.4, 0.6, 0.8, 0.85, 0.9, 0.95, 1)
 
 l = list("embedding"=embeddings, "pi"=pis)
 simSettings = do.call(expand.grid, l)

@@ -113,7 +113,7 @@ calculateLSI = function(lambda_hat, lambda_true){
 ```
 
 ```{r load input loadings}
-inputLoadings = readRDS("./Sim5_input_loadings_Y_inside.RDS")
+inputLoadings = readRDS("./Sim5c_input_loadings_Y_inside.RDS")
 
 # Reorganize into Fac object
 inputLoadingsFac = inputLoadings
@@ -127,16 +127,16 @@ inputLoadingsFac[[7]] = inputLoadings[[3]][,c(3,6,13)]
 ```
 
 ```{r load datasets}
-X1_final = readRDS("./Sim5_X1_Y_inside.RDS")
-X2_final = readRDS("./Sim5_X2_Y_inside.RDS")
-X3_final = readRDS("./Sim5_X3_Y_inside.RDS")
-Y_final = readRDS("./Sim5_Y_Y_inside.RDS")
+X1_final = readRDS("./Sim5c_X1_Y_inside.RDS")
+X2_final = readRDS("./Sim5c_X2_Y_inside.RDS")
+X3_final = readRDS("./Sim5c_X3_Y_inside.RDS")
+Y_final = readRDS("./Sim5c_Y_Y_inside.RDS")
 ```
 
 # Analyze ACMTF results
 ```{r load ACMTF models}
-ACMTFR_CV_models = readRDS("./Sim5_ACMTFR_CV_Y_inside.RDS")
-ACMTFR_CV_params = readRDS("./Sim5_ACMTFR_CV_params_Y_inside.RDS")
+ACMTFR_CV_models = readRDS("./Sim5c_ACMTFR_CV_Y_inside.RDS")
+ACMTFR_CV_params = readRDS("./Sim5c_ACMTFR_CV_params_Y_inside.RDS")
 pi_values = ACMTFR_CV_params
 ```
 
@@ -177,6 +177,7 @@ ACMTF_CV_varExps %>%
   ylim(0,100) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
+
 ```{r calculate model metrics}
 result = lapply(ACMTFR_CV_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadingsFac, x$Fac[[8]])})
 ```
@@ -257,7 +258,7 @@ ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% m
 threshold = 0.95
 colours = hue_pal()(4)
 
-Yreal = readRDS("./Sim5_Y_Y_inside.RDS")
+Yreal = readRDS("./Sim5c_Y_Y_inside.RDS")
 Yreal = Yreal@data
 Yreal = as.matrix(Yreal)
 
@@ -296,12 +297,27 @@ componentShapes %>%
 
 ###
 
-componentShapes %>%
-  as_tibble() %>%
-  ggplot(aes(x=as.factor(pi),y=local1)) +
-  geom_violin(scale="width") +
-  geom_jitter(width=0.05, size=0.5) +
-  xlab(expression(pi)) +
-  ylab("Maximum correlation")
+# componentShapes %>%
+#   as_tibble() %>%
+#   ggplot(aes(x=as.factor(pi),y=local1)) +
+#   geom_violin(scale="width") +
+#   geom_jitter(width=0.05, size=0.5) +
+#   xlab(expression(pi)) +
+#   ylab("Maximum correlation")
 ```
+```{r check what the local components look like}
+Y_found1 = rep(NA, length(ACMTFR_CV_models))
+for(i in 1:length(ACMTFR_CV_models)){
+  Y_found1[i] = max(abs(cor(ACMTFR_CV_models[[i]]$Fac[[1]], inputLoadingsFac[[1]][,3])))
+}
 
+Y_found2 = rep(NA, length(ACMTFR_CV_models))
+for(i in 1:length(ACMTFR_CV_models)){
+  Y_found2[i] = max(abs(cor(ACMTFR_CV_models[[i]]$Fac[[1]], inputLoadingsFac[[1]][,4])))
+}
+
+df = cbind(Y_found1, Y_found2, ACMTFR_CV_params)
+
+df %>% as_tibble() %>% pivot_longer(-ACMTFR_CV_params) %>% ggplot(aes(x=as.factor(ACMTFR_CV_params),y=value)) + facet_wrap(~name) + geom_boxplot()
+
+```
