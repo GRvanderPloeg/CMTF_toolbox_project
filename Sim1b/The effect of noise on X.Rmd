@@ -162,6 +162,7 @@ ACMTF_CV_varExps %>%
     facet_wrap(~name, ncol=3) +
     geom_violin(scale="width") +
     geom_jitter(width=0.05, size=0.5) +
+    stat_summary(fun = median, geom = "point", color = "red", size = 2) +  
     xlab("Noise level (%)") +
     ylab("Variance explained (%)") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -178,6 +179,7 @@ ACMTF_CV_lambda_similarity %>%
   ggplot(aes(x = as.factor(noise), y = V1)) +
   geom_violin(scale="width") +
   geom_jitter(width=0.1, size=0.75) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +  
   xlab("Noise level (%)") +
   ylab("Lambda Similarity Index") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -233,6 +235,7 @@ ACMTF_CV_FMS %>%
   facet_wrap(~name, ncol=3) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab("Noise level (%)") +
   ylab("Factor Match Score") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -271,6 +274,49 @@ distinct3 = unlist(lapply(ACMTF_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
 
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,noise) %>%
+    pivot_longer(-noise) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+# Common
+df[df$name=="global1", "X1"] = 1
+df[df$name=="global1", "X2"] = 1
+df[df$name=="global1", "X3"] = 1
+
+df[df$name=="global2", "X1"] = 1
+df[df$name=="global2", "X2"] = 1
+df[df$name=="global2", "X3"] = 1
+
+# Local
+df[df$name=="local1", "X1"] = 1
+df[df$name=="local1", "X2"] = 1
+
+df[df$name=="local2", "X1"] = 1
+df[df$name=="local2", "X2"] = 1
+
+# Distinct
+df[df$name=="distinct1", "X1"] = 1
+df[df$name=="distinct2", "X2"] = 1
+df[df$name=="distinct3", "X3"] = 1
+
+# Plot part A - bar plot
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(noise))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
+
+# # Plot part B - upset sets
+# upset_data = df %>% filter(beta==0.001) %>% as.data.frame()
+# upset(upset_data, intersect=c("X1", "X2", "X3"))
+
+# Plot part C - legend
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(noise))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Noise level (%)"))
+
+
+# END NEW
 componentShapes = componentShapes %>%
   as_tibble() %>%
   mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%

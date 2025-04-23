@@ -604,14 +604,14 @@ ggarrange(a,b,c,d,e,f,g,h,i,j)
 ```
 
 ```{r compare Y predictions}
-cbind(model_bmi80$Yhat, model_bmi825$Yhat, model_bmi85$Yhat, model_bmi875$Yhat, model_bmi90$Yhat, Ynorm) %>%
+cbind(model_bmi80$Yhat, model_bmi85$Yhat, model_bmi90$Yhat, model_bmi95$Yhat, Ynorm) %>%
   as_tibble() %>%
   pivot_longer(-Ynorm) %>%
   ggplot(aes(x=Ynorm,y=value,col=as.factor(name))) +
   geom_point() +
   xlab("Centered and normalized maternal ppBMI") +
   ylab("Yhat") +
-  scale_color_manual(name="Model", labels=c("ACMTF-R (pi=0.80)", "ACMTF-R (pi=0.825)", "ACMTF-R (pi=0.85)", "ACMTF-R (pi=0.875)", "ACMTF-R (pi=0.90)"), values=hue_pal()(5))
+  scale_color_manual(name="Model", labels=c("ACMTF-R (pi=0.80)", "ACMTF-R (pi=0.85)", "ACMTF-R (pi=0.90)", "ACMTF-R (pi=0.95)"), values=hue_pal()(5))
 ```
 
 ```{r comparisons of factors}
@@ -770,6 +770,138 @@ congruence_matrix %>%
   scale_x_discrete(name="",labels=methods) +
   scale_fill_gradient(limits=c(0,1.01)) +
   theme(legend.position="na", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), text=element_text(size=16))
+```
+```{r further examine the subject loadings}
+comparisons = list(c("0","1"))
+
+# NPLS
+processedFaeces$mode1 %>%
+  mutate(Component_1=NPLS_faecal$Fac[[1]][,1]) %>%
+  ggplot(aes(x=as.factor(Secretor),y=Component_1,fill=as.factor(Secretor))) +
+  geom_boxplot() +
+  stat_compare_means(comparisons=comparisons,label="p.signif") +
+  xlab("Secretor status") +
+  scale_x_discrete(labels=c("Se-", "Se+")) +
+  ylab("Component 1") +
+  scale_fill_manual(name="Secretor status", labels=c("Se-", "Se+"), values=hue_pal()(2)) +
+  ggtitle("NPLS faecal")
+
+processedMilk$mode1 %>%
+  mutate(Component_1=NPLS_milk$Fac[[1]][,1]) %>%
+  ggplot(aes(x=as.factor(Secretor),y=Component_1,fill=as.factor(Secretor))) +
+  geom_boxplot() +
+  stat_compare_means(comparisons=comparisons,label="p.signif") +
+  xlab("Secretor status") +
+  scale_x_discrete(labels=c("Se-", "Se+")) +
+  ylab("Component 1") +
+  scale_fill_manual(name="Secretor status", labels=c("Se-", "Se+"), values=hue_pal()(2)) +
+  ggtitle("NPLS milk")
+
+processedMilkMetab$mode1 %>%
+  mutate(Component_1=NPLS_milkMetab$Fac[[1]][,1]) %>%
+  ggplot(aes(x=as.factor(Secretor),y=Component_1,fill=as.factor(Secretor))) +
+  geom_boxplot() +
+  stat_compare_means(comparisons=comparisons,label="p.signif") +
+  xlab("Secretor status") +
+  scale_x_discrete(labels=c("Se-", "Se+")) +
+  ylab("Component 1") +
+  scale_fill_manual(name="Secretor status", labels=c("Se-", "Se+"), values=hue_pal()(2)) +
+  ggtitle("NPLS milkMetab")
+
+# ACMTF-R
+processedFaeces$mode1 %>%
+  mutate(Component_1=model_bmi80$Fac[[1]][,1]) %>%
+  ggplot(aes(x=as.factor(Secretor),y=Component_1,fill=as.factor(Secretor))) +
+  geom_boxplot() +
+  stat_compare_means(comparisons=comparisons,label="p.signif") +
+  xlab("Secretor status") +
+  scale_x_discrete(labels=c("Se-", "Se+")) +
+  ylab("Component 1") +
+  scale_fill_manual(name="Secretor status", labels=c("Se-", "Se+"), values=hue_pal()(2)) +
+  ggtitle("ACMTF-R pi=0.80 (1)")
+
+processedFaeces$mode1 %>%
+  mutate(Component_2=model_bmi80$Fac[[1]][,2]) %>%
+  ggplot(aes(x=as.factor(Secretor),y=Component_2,fill=as.factor(Secretor))) +
+  geom_boxplot() +
+  stat_compare_means(comparisons=comparisons,label="p.signif") +
+  xlab("Secretor status") +
+  scale_x_discrete(labels=c("Se-", "Se+")) +
+  ylab("Component 2") +
+  scale_fill_manual(name="Secretor status", labels=c("Se-", "Se+"), values=hue_pal()(2)) +
+  ggtitle("ACMTF-R pi=0.80 (2)")
+
+# ACMTF
+processedFaeces$mode1 %>%
+  mutate(Component_1=model_ACMTF$Fac[[1]][,1]) %>%
+  ggplot(aes(x=as.factor(Secretor),y=Component_1,fill=as.factor(Secretor))) +
+  geom_boxplot() +
+  stat_compare_means(comparisons=comparisons,label="p.signif") +
+  xlab("Secretor status") +
+  scale_x_discrete(labels=c("Se-", "Se+")) +
+  ylab("Component 1") +
+  scale_fill_manual(name="Secretor status", labels=c("Se-", "Se+"), values=hue_pal()(2)) +
+  ggtitle("ACMTF")
+
+adonis2(NPLS_faecal$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedFaeces$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(NPLS_milk$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedMilk$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(NPLS_milkMetab$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedMilkMetab$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(model_bmi80$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedFaeces$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(model_bmi85$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedFaeces$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(model_bmi90$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedFaeces$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(model_bmi95$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedFaeces$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+adonis2(model_ACMTF$Fac[[1]] ~ BMI.group + C.section + Secretor + Lewis, data=processedFaeces$mode1, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+```
+
+```{r further examine the loadings for metabolomics}
+# NPLS
+temp = processedMilkMetab$mode2 %>%
+  mutate(Component_1=NPLS_milkMetab$Fac[[2]][,1]) %>%
+  arrange(desc(Component_1)) %>%
+  mutate(index=1:nrow(.))
+
+a = temp %>%
+  ggplot(aes(x=Component_1,y=as.factor(index),fill=as.factor(Class))) +
+  geom_bar(stat="identity") +
+  scale_y_discrete(labels=temp$Metabolite) +
+  ggtitle("NPLS")
+
+# ACMTF
+temp = processedMilkMetab$mode2 %>%
+  mutate(Component_1=model_ACMTF$Fac[[6]][,1]) %>%
+  arrange(desc(Component_1)) %>%
+  mutate(index=1:nrow(.))
+
+b = temp %>%
+  ggplot(aes(x=Component_1,y=as.factor(index),fill=as.factor(Class))) +
+  geom_bar(stat="identity") +
+  scale_y_discrete(labels=temp$Metabolite) +
+  ggtitle("ACMTF")
+
+# ACMTF-R pi=0.8
+temp = processedMilkMetab$mode2 %>%
+  mutate(Component_1=model_bmi80$Fac[[6]][,1]) %>%
+  arrange(desc(Component_1)) %>%
+  mutate(index=1:nrow(.))
+
+c = temp %>%
+  ggplot(aes(x=Component_1,y=as.factor(index),fill=as.factor(Class))) +
+  geom_bar(stat="identity") +
+  scale_y_discrete(labels=temp$Metabolite) +
+  ggtitle("ACMTF-R pi=0.80 (1)")
+
+temp = processedMilkMetab$mode2 %>%
+  mutate(Component_2=model_bmi80$Fac[[6]][,2]) %>%
+  arrange(desc(Component_2)) %>%
+  mutate(index=1:nrow(.))
+
+d = temp %>%
+  ggplot(aes(x=Component_2,y=as.factor(index),fill=as.factor(Class))) +
+  geom_bar(stat="identity") +
+  scale_y_discrete(labels=temp$Metabolite) +
+  ggtitle("ACMTF-R pi=0.80 (2)")
+
+ggarrange(a,b,c,d, common.legend=TRUE)
 ```
 
 ```{r plot the associations}

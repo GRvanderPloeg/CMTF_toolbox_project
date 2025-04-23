@@ -186,6 +186,7 @@ ACMTF_CV_varExps %>%
   facet_wrap(~name, ncol=4) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Variance explained (%)") +
   ylim(0,100) +
@@ -207,6 +208,7 @@ ACMTF_CV_lambda_similarity %>%
   ggplot(aes(x = as.factor(pi), y = V1)) +
   geom_violin(scale="width") +
   geom_jitter(width=0.1, size=0.75) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Lambda Similarity Index") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -250,6 +252,7 @@ ACMTF_CV_FMS %>%
   facet_wrap(~name, ncol=3) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Factor Match Score") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -304,6 +307,51 @@ y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal)
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found)
 
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+    filter(embedding == 0.5) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,pi) %>%
+    pivot_longer(-pi) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+# Common
+df[df$name=="global1", "X1"] = 1
+df[df$name=="global1", "X2"] = 1
+df[df$name=="global1", "X3"] = 1
+
+df[df$name=="global2", "X1"] = 1
+df[df$name=="global2", "X2"] = 1
+df[df$name=="global2", "X3"] = 1
+
+# Local
+df[df$name=="local1", "X1"] = 1
+df[df$name=="local1", "X2"] = 1
+
+df[df$name=="local2", "X1"] = 1
+df[df$name=="local2", "X2"] = 1
+
+# Distinct
+df[df$name=="distinct1", "X1"] = 1
+df[df$name=="distinct2", "X2"] = 1
+df[df$name=="distinct3", "X3"] = 1
+
+# Plot part A - bar plot
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
+
+# # Plot part B - upset sets
+# upset_data = df %>% filter(beta==0.001) %>% as.data.frame()
+# upset(upset_data, intersect=c("X1", "X2", "X3"))
+
+# Plot part C - legend
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+
+
+# END NEW
+
 componentShapes %>% as_tibble() %>% select(pi, embedding, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found) %>% pivot_longer(-c(pi,embedding)) %>% mutate(Found = value > threshold) %>% ggplot(aes(x=as.factor(pi),fill=Found)) + facet_grid(vars(name),vars(pi)) + geom_bar()
 
 componentShapes %>% as_tibble() %>% mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>% mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>% select(pi, embedding, Global, Local, Distinct) %>% pivot_longer(-c(pi,embedding)) %>% mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>% ggplot(aes(x=as.factor(pi),fill=as.factor(value))) + facet_grid(vars(name),vars(embedding)) + geom_bar(col="black") + labs(x="Pi",y="Number of models",fill="Number of components lost") + theme(legend.position="top")
@@ -325,6 +373,8 @@ componentShapes %>%
 ```
 
 ```{r grab the best local1 component from every model}
+threshold = 0.95
+
 noises = seq(0, 1, length.out=11)
 noises = noises / (1 - noises)
 noises[11] = 999
@@ -356,7 +406,52 @@ for(i in 1:length(ACMTFR_CV_models)){
 Y_found_inside = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
 # Y_found_outside = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], Youtside)))}))
 
-df = cbind(ACMTF_CV_FMS, Y_found_inside, Y_found_outside)
+componentShapes = cbind(ACMTF_CV_FMS, Y_found_inside, Y_found_outside)
+
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold, y_inside=Y_found_inside < threshold, y_outside=Y_found_outside<threshold) %>%
+    filter(embedding == 0.5) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,y_outside,pi) %>%
+    pivot_longer(-pi) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+# Common
+df[df$name=="global1", "X1"] = 1
+df[df$name=="global1", "X2"] = 1
+df[df$name=="global1", "X3"] = 1
+
+df[df$name=="global2", "X1"] = 1
+df[df$name=="global2", "X2"] = 1
+df[df$name=="global2", "X3"] = 1
+
+# Local
+df[df$name=="local1", "X1"] = 1
+df[df$name=="local1", "X2"] = 1
+
+df[df$name=="local2", "X1"] = 1
+df[df$name=="local2", "X2"] = 1
+
+# Distinct
+df[df$name=="distinct1", "X1"] = 1
+df[df$name=="distinct2", "X2"] = 1
+df[df$name=="distinct3", "X3"] = 1
+
+# Plot part A - bar plot
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3", "y_outside"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]), expression(y["outside"]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
+
+# # Plot part B - upset sets
+# upset_data = df %>% filter(beta==0.001) %>% as.data.frame()
+# upset(upset_data, intersect=c("X1", "X2", "X3"))
+
+# Plot part C - legend
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+
+
+# END NEW
 
 componentShapes %>% as_tibble() %>% select(pi, embedding, local1, y_found) %>% group_by(pi, embedding) %>% summarize(m1 = median(local1), y1 = median(y_found)) %>% ungroup() %>% pivot_longer(-c(pi,embedding)) %>% ggplot(aes(x=as.factor(pi),y=value,group=as.factor(name),col=as.factor(name))) + facet_wrap(~embedding) + geom_line() + geom_point() + xlab("Pi") + ylab("Maximum correlation") + scale_color_manual(name="Component", labels=c("Local1", "Y"), values=hue_pal()(2))
 

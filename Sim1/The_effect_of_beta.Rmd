@@ -211,6 +211,7 @@ ACMTF_CV_varExps %>%
     facet_wrap(~name, ncol=3) +
     geom_violin(scale="width") +
     geom_jitter(width=0.05, size=0.5) +
+    stat_summary(fun = median, geom = "point", color = "red", size = 2) +
     xlab(expression(beta)) +
     ylab("Variance explained (%)") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -231,12 +232,14 @@ ACMTF_CV_lambda_similarity %>%
   ggplot(aes(x = as.factor(beta), y = V1)) +
   geom_violin(scale="width") +
   geom_jitter(width=0.1, size=0.75) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(beta)) +
   ylab("Lambda Similarity Index") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 ACMTF_CV_lambda_similarity %>% ggplot(aes(x=V1)) + facet_wrap(~beta) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
 ```
+
 ```{r plot some lambda matrix examples}
 a=ACMTF_CV_models[[2]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Beta=1e-4") + theme(legend.position="none")
 
@@ -276,12 +279,14 @@ ACMTF_CV_FMS %>%
   facet_wrap(~name, ncol=3) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +  
   xlab(expression(beta)) +
   ylab("Factor Match Score") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 ACMTF_CV_FMS %>% select(X1,X2,X3,beta) %>% pivot_longer(-beta) %>% ggplot(aes(x=value)) + facet_grid(vars(beta),vars(name)) + geom_histogram() + ylim(0,1000) + xlab("Factor Match Score") + ylab("Number of models")
 ```
+
 ```{r plot loss}
 ACMTF_CV_f = do.call(rbind, lapply(ACMTF_CV_models, FUN=function(x){x$f}))
 ACMTF_CV_f = ACMTF_CV_f %>% as_tibble() %>% mutate(beta=ACMTF_CV_params, index=1:length(beta)) %>% mutate(correct = V1 < 0.25)
@@ -292,6 +297,7 @@ ACMTF_CV_f %>% ggplot(aes(x=as.factor(beta),y=V1)) + geom_boxplot() + geom_hline
 ```{r plot lambda similarity vs fms}
 ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% select(X1, X2, X3, beta, lambda_similarity) %>% pivot_longer(-c(beta, lambda_similarity)) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_grid(vars(name), vars(beta)) + geom_point() + scale_x_log10() + theme(legend.position="none") + xlab("Lambda similarity") + ylab("FMS")
 ```
+
 ```{r plot fraction of correct models}
 lambda_sim_threshold = 0.9
 fms_threshold = 0.9
@@ -305,6 +311,7 @@ ACMTF_CV_FMS %>%
   ylab("Number of models") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
+
 ```{r how often are the components found}
 threshold = 0.95
 
@@ -317,6 +324,50 @@ distinct2 = unlist(lapply(ACMTF_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]
 distinct3 = unlist(lapply(ACMTF_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3)
+
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,beta) %>%
+    pivot_longer(-beta) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+# Common
+df[df$name=="global1", "X1"] = 1
+df[df$name=="global1", "X2"] = 1
+df[df$name=="global1", "X3"] = 1
+
+df[df$name=="global2", "X1"] = 1
+df[df$name=="global2", "X2"] = 1
+df[df$name=="global2", "X3"] = 1
+
+# Local
+df[df$name=="local1", "X1"] = 1
+df[df$name=="local1", "X2"] = 1
+
+df[df$name=="local2", "X1"] = 1
+df[df$name=="local2", "X2"] = 1
+
+# Distinct
+df[df$name=="distinct1", "X1"] = 1
+df[df$name=="distinct2", "X2"] = 1
+df[df$name=="distinct3", "X3"] = 1
+
+# Plot part A - bar plot
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(beta))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
+
+# # Plot part B - upset sets
+# upset_data = df %>% filter(beta==0.001) %>% as.data.frame()
+# upset(upset_data, intersect=c("X1", "X2", "X3"))
+
+# Plot part C - legend
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(beta))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Beta"))
+
+
+# END NEW
 
 componentShapes = componentShapes %>%
   as_tibble() %>%

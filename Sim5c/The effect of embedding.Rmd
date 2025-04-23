@@ -172,6 +172,7 @@ ACMTF_CV_varExps %>%
   facet_wrap(~name, ncol=4) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Variance explained (%)") +
   ylim(0,100) +
@@ -192,6 +193,7 @@ ACMTF_CV_lambda_similarity %>%
   ggplot(aes(x = as.factor(pi), y = V1)) +
   geom_violin(scale="width") +
   geom_jitter(width=0.1, size=0.75) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Lambda Similarity Index") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -209,6 +211,7 @@ d=ACMTFR_CV_models[[384]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %
 
 ggarrange(a,b,c,d, nrow=1, ncol=4)
 ```
+
 ```{r plot fms}
 ACMTF_CV_FMS1 = do.call(rbind, lapply(result, FUN=function(x){x$FMS1})) %>% as_tibble()
 ACMTF_CV_FMS2 = do.call(rbind, lapply(result, FUN=function(x){x$FMS2})) %>% as_tibble()
@@ -231,6 +234,7 @@ ACMTF_CV_FMS %>%
   facet_wrap(~name, ncol=3) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Factor Match Score") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -272,6 +276,50 @@ distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1
 y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found)
+
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,pi) %>%
+    pivot_longer(-pi) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+# Common
+df[df$name=="global1", "X1"] = 1
+df[df$name=="global1", "X2"] = 1
+df[df$name=="global1", "X3"] = 1
+
+df[df$name=="global2", "X1"] = 1
+df[df$name=="global2", "X2"] = 1
+df[df$name=="global2", "X3"] = 1
+
+# Local
+df[df$name=="local1", "X1"] = 1
+df[df$name=="local1", "X2"] = 1
+
+df[df$name=="local2", "X1"] = 1
+df[df$name=="local2", "X2"] = 1
+
+# Distinct
+df[df$name=="distinct1", "X1"] = 1
+df[df$name=="distinct2", "X2"] = 1
+df[df$name=="distinct3", "X3"] = 1
+
+# Plot part A - bar plot
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
+
+# # Plot part B - upset sets
+# upset_data = df %>% filter(beta==0.001) %>% as.data.frame()
+# upset(upset_data, intersect=c("X1", "X2", "X3"))
+
+# Plot part C - legend
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+
+
+# END NEW
 
 componentShapes %>% as_tibble() %>% select(pi, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found) %>% pivot_longer(-pi) %>% mutate(Found = value > threshold) %>% ggplot(aes(x=as.factor(pi),fill=Found)) + facet_grid(vars(name),vars(pi)) + geom_bar()
 
@@ -320,4 +368,81 @@ df = cbind(Y_found1, Y_found2, ACMTFR_CV_params)
 
 df %>% as_tibble() %>% pivot_longer(-ACMTFR_CV_params) %>% ggplot(aes(x=as.factor(ACMTFR_CV_params),y=value)) + facet_wrap(~name) + geom_boxplot()
 
+```
+
+```{r another approach}
+#' Compute component-wise recovery correlations between true and estimated loadings
+#'
+#' @param U      Numeric matrix of true loadings (I x r)
+#' @param Uhat   Numeric matrix of estimated loadings (I x r)
+#' @return       Named vector of length r with |correlations| for each component
+component_recovery <- function(U, Uhat) {
+  if (!is.matrix(U) || !is.matrix(Uhat)) {
+    stop("Both U and Uhat must be matrices.")
+  }
+  if (ncol(U) != ncol(Uhat)) {
+    stop("U and Uhat must have the same number of columns (components).")
+  }
+  r <- ncol(U)
+  # 1) Compute Gram matrices
+  G    <- crossprod(U)       # r x r
+  Ghat <- crossprod(Uhat)    # r x r
+
+  # 2) Eigen-decomposition for sqrt and inverse sqrt
+  eigG    <- eigen(G)
+  sqrtG   <- eigG$vectors %*% diag(sqrt(pmax(eigG$values, 0))) %*% t(eigG$vectors)
+  invSqrtG <- eigG$vectors %*% diag(1 / sqrt(pmax(eigG$values, .Machine$double.eps))) %*% t(eigG$vectors)
+
+  eigGhat    <- eigen(Ghat)
+  sqrtGhat   <- eigGhat$vectors %*% diag(sqrt(pmax(eigGhat$values, 0))) %*% t(eigGhat$vectors)
+  invSqrtGhat <- eigGhat$vectors %*% diag(1 / sqrt(pmax(eigGhat$values, .Machine$double.eps))) %*% t(eigGhat$vectors)
+
+  # 3) Whitened (orthonormal) bases
+  U_tilde    <- U     %*% invSqrtG
+  Uhat_tilde <- Uhat  %*% invSqrtGhat
+
+  # 4) Overlap and Procrustes alignment
+  M  <- crossprod(U_tilde, Uhat_tilde)  # r x r
+  sv <- svd(M)
+  P  <- sv$u
+  Q  <- sv$v
+  R  <- Q %*% t(P)
+
+  # 5) Rotate estimated back to original scale
+  Uhat_aligned <- Uhat_tilde %*% R %*% sqrtG
+
+  # 6) Compute per-component absolute correlations
+  rho <- numeric(r)
+  for (k in seq_len(r)) {
+    rho[k] <- abs(cor(U[, k], Uhat_aligned[, k]))
+  }
+  names(rho) <- paste0("Comp", seq_len(r))
+  return(rho)
+}
+
+component_recovery(inputLoadingsFac[[1]], ACMTFR_CV_models[[602]]$Fac[[1]])
+
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim5c_Y_Y_inside.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+result = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){component_recovery(x$Fac[[1]], inputLoadings[[1]])}))
+colnames(result) = c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3")
+
+componentShapes = cbind(ACMTF_CV_FMS, result)
+
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,pi) %>%
+    pivot_longer(-pi) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
 ```

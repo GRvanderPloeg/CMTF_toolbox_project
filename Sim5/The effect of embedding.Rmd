@@ -172,6 +172,7 @@ ACMTF_CV_varExps %>%
   facet_wrap(~name, ncol=4) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Variance explained (%)") +
   ylim(0,100) +
@@ -191,6 +192,7 @@ ACMTF_CV_lambda_similarity %>%
   ggplot(aes(x = as.factor(pi), y = V1)) +
   geom_violin(scale="width") +
   geom_jitter(width=0.1, size=0.75) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Lambda Similarity Index") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -230,6 +232,7 @@ ACMTF_CV_FMS %>%
   facet_wrap(~name, ncol=3) +
   geom_violin(scale="width") +
   geom_jitter(width=0.05, size=0.5) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
   xlab(expression(pi)) +
   ylab("Factor Match Score") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
@@ -252,6 +255,12 @@ fms_threshold = 0.8
 
 ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity >= lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>% ggplot(aes(x=as.factor(pi),fill=correct)) + geom_bar(col="black") + xlab("Noise level") + ylab("Number of models")
 ```
+```{r plot rhos}
+df = do.call(rbind, lapply(ACMTFR_CV_models, FUN=function(x){t(abs(x$rho))}))
+df %>% as_tibble() %>% mutate(pi=pi_values) %>% pivot_longer(-pi) %>% ggplot(aes(x=as.factor(name),y=value)) + facet_wrap(~pi) + geom_boxplot()
+
+cbind(unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(x$rho))})), pi_values) %>% as_tibble() %>% ggplot(aes(x=as.factor(pi_values),y=V1)) + geom_boxplot()
+```
 
 ```{r how often are the components found}
 threshold = 0.95
@@ -271,6 +280,50 @@ distinct3 = unlist(lapply(ACMTFR_CV_models, FUN=function(x){max(abs(cor(x$Fac[[1
 y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
 
 componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found)
+
+# NEW
+df = componentShapes %>%
+    as_tibble() %>%
+    mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>%
+    select(global1,global2,local1,local2,distinct1,distinct2,distinct3,pi) %>%
+    pivot_longer(-pi) %>%
+    filter(value==FALSE) %>%
+    mutate(X1=0,X2=0,X3=0) %>%
+    select(-value)
+
+# Common
+df[df$name=="global1", "X1"] = 1
+df[df$name=="global1", "X2"] = 1
+df[df$name=="global1", "X3"] = 1
+
+df[df$name=="global2", "X1"] = 1
+df[df$name=="global2", "X2"] = 1
+df[df$name=="global2", "X3"] = 1
+
+# Local
+df[df$name=="local1", "X1"] = 1
+df[df$name=="local1", "X2"] = 1
+
+df[df$name=="local2", "X1"] = 1
+df[df$name=="local2", "X2"] = 1
+
+# Distinct
+df[df$name=="distinct1", "X1"] = 1
+df[df$name=="distinct2", "X2"] = 1
+df[df$name=="distinct3", "X3"] = 1
+
+# Plot part A - bar plot
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="none")
+
+# # Plot part B - upset sets
+# upset_data = df %>% filter(beta==0.001) %>% as.data.frame()
+# upset(upset_data, intersect=c("X1", "X2", "X3"))
+
+# Plot part C - legend
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pi))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+
+
+# END NEW
 
 componentShapes %>% as_tibble() %>% select(pi, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found) %>% pivot_longer(-pi) %>% mutate(Found = value > threshold) %>% ggplot(aes(x=as.factor(pi),fill=Found)) + facet_grid(vars(name),vars(pi)) + geom_bar()
 
