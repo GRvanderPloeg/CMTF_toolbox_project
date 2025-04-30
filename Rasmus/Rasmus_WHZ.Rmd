@@ -102,97 +102,41 @@ Z = setupCMTFdata(datasets, modes, normalize=TRUE)
 # model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=2, pi=1, nstart=1)
 ```
 
-```{r check best pi}
-CV_pi_models = readRDS("./CV_WHZ_pi_models.RDS")
-pis = c(0.2, 0.5, 0.6, 0.7, 0.8, 0.85, 0.851, 0.852, 0.853, 0.854, 0.855, 0.856, 0.857, 0.858, 0.859, 0.86, 0.87, 0.88, 0.89, 0.9, 1)
+```{r check CV outcome}
+# These files are very big and need to be cleared from RAM
+cv_outcome1 = readRDS("./CV_WHZ_ACMTF.RDS") # two components
+cv_outcome1$plots$overview
+rm(cv_outcome1)
 
-repaired_CV_pi_models = list()
-for(i in 1:length(pis)){
-  models = CV_pi_models[[i]]
-  loss = do.call(rbind, lapply(models, FUN=function(x){x$f}))
-  index = which(loss == min(loss))
-  repaired_CV_pi_models[[i]] = models[[index]]
-}
+cv_outcome95 = readRDS("./CV_small_WHZ_0.95.RDS") # two components
+cv_outcome95$plots$overview
+rm(cv_outcome95)
 
-varExpsY = do.call(rbind, lapply(repaired_CV_pi_models, FUN=function(x){x$varExpY}))
-df = cbind(varExpsY, pis)
-colnames(df) = c("varExpY", "pi")
+cv_outcome90 = readRDS("./CV_small_WHZ_0.9.RDS") # one component, does not explain Y
+cv_outcome90$plots$overview
+rm(cv_outcome90)
 
-df %>% ggplot(aes(x=pi,y=varExpY)) + geom_line() + geom_point() + xlab(expression(pi)) + ylab("Variance explained in Y (%)")
-```
+# we need to check in between here
 
-```{r check CV}
-WHZ1_small = readRDS("./CV_small_WHZ_0.8.RDS")
-WHZ2_small = readRDS("./CV_small_WHZ_0.825.RDS")
-WHZ3_small = readRDS("./CV_small_WHZ_0.85.RDS")
-WHZ4_small = readRDS("./CV_small_WHZ_0.875.RDS")
-WHZ5_small = readRDS("./CV_small_WHZ_0.9.RDS")
-WHZ6_small = readRDS("./CV_small_WHZ_0.925.RDS")
-WHZ7_small = readRDS("./CV_small_WHZ_0.95.RDS")
-WHZ8_small = readRDS("./CV_small_WHZ_0.975.RDS")
+cv_outcome85 = readRDS("./CV_small_WHZ_0.85.RDS") # one component, does explain Y
+cv_outcome85$plots$overview
+rm(cv_outcome85)
 
-# investigateFMS(lapply(Jakobsen2025$Z$object, FUN=function(x){x@data}), Jakobsen2025$Z$modes, sharedMode=1, numCores=16, method="L-BFGS")
-```
+cv_outcome80 = readRDS("./CV_small_WHZ_0.8.RDS") # one very bad component
+cv_outcome80$plots$overview
+rm(cv_outcome80)
 
-```{r plot the things}
-plotCV = function(result){
-  varExpData = result$varExp
-  RMSEdata = result$RMSE
-  FMSdata = result$FMS
-  
-  a = varExpData %>%
-    pivot_longer(-numComponents) %>%
-    ggplot(ggplot2::aes(x = numComponents,y = value, col = as.factor(name))) +
-    geom_path() +
-    geom_point() +
-    labs(x="Number of components", y="Variance explained (%)", color="Block") +
-    scale_x_continuous(breaks=varExpData$numComponents) +
-    theme(legend.position="na") +
-    ylim(min(varExpData),100)
-  b = RMSEdata %>%
-    ggplot(ggplot2::aes(x = numComponents, y = RMSE)) +
-    geom_path() +
-    geom_point() +
-    labs(x = "Number of components", y = "RMSECV") +
-    scale_x_continuous(breaks = RMSEdata$numComponents)
-  c = FMSdata %>%
-    pivot_longer(-numComponents) %>%
-    ggplot(aes(x=as.factor(numComponents),y=value)) +
-    facet_wrap(~name) +
-    geom_boxplot() +
-    labs(x="Number of components",y="Factor Match Score")
-  ggarrange(a,b,c,nrow=1)
-}
+cv_outcome75 = readRDS("./CV_small_WHZ_0.75.RDS") # one very bad component
+cv_outcome75$plots$overview
+rm(cv_outcome75)
 
-plotCV_old = function(result){
-  varExpData = result$varExp
-  RMSEdata = result$RMSE
-  a = varExpData %>%
-    pivot_longer(-numComponents) %>%
-    ggplot(ggplot2::aes(x = numComponents,y = value, col = as.factor(name))) +
-    geom_path() +
-    geom_point() +
-    labs(x="Number of components", y="Variance explained (%)", color="Block") +
-    scale_x_continuous(breaks=varExpData$numComponents) +
-    theme(legend.position="na") +
-    ylim(min(varExpData),100)
-  b = RMSEdata %>%
-    ggplot(ggplot2::aes(x = numComponents, y = RMSE)) +
-    geom_path() +
-    geom_point() +
-    labs(x = "Number of components", y = "RMSE") +
-    scale_x_continuous(breaks = RMSEdata$numComponents)
-  ggarrange(a,b)
-}
+cv_outcome50 = readRDS("./CV_small_WHZ_0.5.RDS") # one very bad component
+cv_outcome50$plots$overview
+rm(cv_outcome50)
 
-plotCV(WHZ1_small)
-plotCV(WHZ2_small)
-plotCV(WHZ3_small)
-plotCV(WHZ4_small)
-plotCV(WHZ5_small)
-plotCV(WHZ6_small)
-plotCV(WHZ7_small)
-plotCV(WHZ8_small)
+cv_outcome25 = readRDS("./CV_small_WHZ_0.25.RDS") # awful, one component, not worth discussing
+cv_outcome25$plots$overview
+rm(cv_outcome25)
 ```
 
 ```{r find acmtf model}

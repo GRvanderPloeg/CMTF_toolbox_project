@@ -32,18 +32,7 @@ datasets = list(processedFaeces$data, processedMilk$data, processedMilkMetab$dat
 modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
 Z = setupCMTFdata(datasets, modes, normalize=TRUE)
 
-Y = processedFaeces$mode1$whz.6m
-Ycnt = Y - mean(Y)
-Ynorm = Ycnt / norm(Ycnt, "2")
-
-pi_values = c(0.25, 0.50, 0.75, 0.80, 0.85, 0.90, 0.95)
-for(i in 1:length(pi_values)){
-  pi = pi_values[i]
-  print(pi)
-
-  result = CMTFtoolbox::ACMTFR_modelSelection(datasets, modes, Ynorm, maxNumComponents=10, pi=pi, nstart=10, numCores=parallel::detectCores(), method="L-BFGS", cvFolds=10, abs_tol=1e-6, rel_tol=1e-6, grad_tol=1e-6)
-  print(result)
-  saveRDS(result, paste0("./CV_small_WHZ_", pi, ".RDS"))
-}
+result = CMTFtoolbox::ACMTF_modelSelection(datasets, modes, maxNumComponents=10, nstart=10, numCores=parallel::detectCores(), method="L-BFGS", cvFolds=10, abs_tol=1e-6, rel_tol=1e-6, grad_tol=1e-6)
+saveRDS(result, "./CV_WHZ_ACMTF.RDS")
 
 
