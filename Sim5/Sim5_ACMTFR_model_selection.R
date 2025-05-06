@@ -20,11 +20,11 @@ datasets = list(X1_final, X2_final, X3_final)
 modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
 
 # Prepare sim settings
-pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95)
 
 # Run model CV
 for(i in 1:length(pis)) {
   piValue = pis[i]
-  result=CMTFtoolbox::ACMTFR_modelSelection(datasets,modes,as.matrix(Y_final@data),pi=piValue,nstart=10,cvFolds=10, normalize=FALSE)
+  result=CMTFtoolbox::ACMTFR_modelSelection(datasets,modes,as.matrix(Y_final@data),pi=piValue,maxNumComponents = 10,nstart=20,cvFolds=10,normalize=FALSE,method="L-BFGS",numCores=parallel::detectCores())
   saveRDS(result, paste0("Sim5_ACMTFR_model_selection_result", piValue, ".RDS"))
 }

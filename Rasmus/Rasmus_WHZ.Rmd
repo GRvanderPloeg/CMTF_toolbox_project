@@ -83,7 +83,7 @@ NPLS_faecal = NPLStoolbox::triPLS1(processedFaeces$data, Ynorm, 1)
 # b=CV_milk$RMSE %>% ggplot(aes(x=numComponents,y=RMSE)) + geom_line() + geom_point() + xlab("Number of components") + ylab("RMSECV")
 # ggarrange(a,b)
 
-NPLS_milk = NPLStoolbox::triPLS1(processedMilk$data, Ynorm, 1) # 2 not interpretable
+NPLS_milk = NPLStoolbox::triPLS1(processedMilk$data, Ynorm, 1)
 
 # CV_milkMetab = NPLStoolbox::ncrossreg(processedMilkMetab$data, Ynorm)
 # 
@@ -91,7 +91,7 @@ NPLS_milk = NPLStoolbox::triPLS1(processedMilk$data, Ynorm, 1) # 2 not interpret
 # b=CV_milkMetab$RMSE %>% ggplot(aes(x=numComponents,y=RMSE)) + geom_line() + geom_point() + xlab("Number of components") + ylab("RMSECV")
 # ggarrange(a,b)
 
-NPLS_milkMetab = NPLStoolbox::triPLS1(processedMilkMetab$data, Ynorm, 1)
+NPLS_milkMetab = NPLStoolbox::triPLS1(processedMilkMetab$data, Ynorm, 2)
 ```
 
 ```{r create Z object for fitting ACMTF}
@@ -104,39 +104,53 @@ Z = setupCMTFdata(datasets, modes, normalize=TRUE)
 
 ```{r check CV outcome}
 # These files are very big and need to be cleared from RAM
-cv_outcome1 = readRDS("./CV_WHZ_ACMTF.RDS") # two components
-cv_outcome1$plots$overview
-rm(cv_outcome1)
-
-cv_outcome95 = readRDS("./CV_small_WHZ_0.95.RDS") # two components
-cv_outcome95$plots$overview
-rm(cv_outcome95)
-
-cv_outcome90 = readRDS("./CV_small_WHZ_0.9.RDS") # one component, does not explain Y
-cv_outcome90$plots$overview
-rm(cv_outcome90)
-
-# we need to check in between here
-
-cv_outcome85 = readRDS("./CV_small_WHZ_0.85.RDS") # one component, does explain Y
-cv_outcome85$plots$overview
-rm(cv_outcome85)
-
-cv_outcome80 = readRDS("./CV_small_WHZ_0.8.RDS") # one very bad component
-cv_outcome80$plots$overview
-rm(cv_outcome80)
-
-cv_outcome75 = readRDS("./CV_small_WHZ_0.75.RDS") # one very bad component
-cv_outcome75$plots$overview
-rm(cv_outcome75)
-
-cv_outcome50 = readRDS("./CV_small_WHZ_0.5.RDS") # one very bad component
-cv_outcome50$plots$overview
-rm(cv_outcome50)
-
-cv_outcome25 = readRDS("./CV_small_WHZ_0.25.RDS") # awful, one component, not worth discussing
-cv_outcome25$plots$overview
-rm(cv_outcome25)
+# cv_outcome1 = readRDS("./CV_WHZ_ACMTF.RDS") # two components
+# cv_outcome1$plots$overview
+# rm(cv_outcome1)
+# 
+# cv_outcome95 = readRDS("./CV_small_WHZ_0.95.RDS") # two components
+# cv_outcome95$plots$overview
+# rm(cv_outcome95)
+# 
+# cv_outcome90 = readRDS("./CV_small_WHZ_0.9.RDS") # must be one due to degeneracy
+# cv_outcome90$plots$overview
+# rm(cv_outcome90)
+# 
+# cv_outcome89 = readRDS("./CV_small_WHZ_0.89.RDS") # must be one due to degeneracy
+# cv_outcome89$plots$overview
+# rm(cv_outcome89)
+# 
+# cv_outcome88 = readRDS("./CV_small_WHZ_0.88.RDS") # must be one due to degeneracy
+# cv_outcome88$plots$overview
+# rm(cv_outcome88)
+# 
+# cv_outcome87 = readRDS("./CV_small_WHZ_0.87.RDS") # must be one due to degeneracy
+# cv_outcome87$plots$overview
+# rm(cv_outcome87)
+# 
+# cv_outcome86 = readRDS("./CV_small_WHZ_0.86.RDS") # must be one due to degeneracy
+# cv_outcome86$plots$overview
+# rm(cv_outcome86)
+# 
+# cv_outcome85 = readRDS("./CV_small_WHZ_0.85.RDS") # must be one due to degeneracy
+# cv_outcome85$plots$overview
+# rm(cv_outcome85)
+# 
+# cv_outcome80 = readRDS("./CV_small_WHZ_0.8.RDS") # must be one due to degeneracy, overfit
+# cv_outcome80$plots$overview
+# rm(cv_outcome80)
+# 
+# cv_outcome75 = readRDS("./CV_small_WHZ_0.75.RDS") # must be one due to degeneracy, overfit
+# cv_outcome75$plots$overview
+# rm(cv_outcome75)
+# 
+# cv_outcome50 = readRDS("./CV_small_WHZ_0.5.RDS") # must be one due to degeneracy, overfit
+# cv_outcome50$plots$overview
+# rm(cv_outcome50)
+# 
+# cv_outcome25 = readRDS("./CV_small_WHZ_0.25.RDS") # nonsensical
+# cv_outcome25$plots$overview
+# rm(cv_outcome25)
 ```
 
 ```{r find acmtf model}
@@ -154,32 +168,11 @@ df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(name=factor(n
 
 df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
 
-bestIndex = 61
+bestIndex = 24
 model_ACMTF = ACMTFR_models[[bestIndex]]
 ```
-
-```{r find best model pi=0.80}
-ACMTFR_models = readRDS("./ACMTFR_model_whz80.RDS")
-
-iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
-loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
-varExpX = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExp}))
-varExpY = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExpY}))
-# cor1_2 = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){cor(x$Fac[[1]][,1],x$Fac[[1]][,2])}))
-
-df = cbind(loss, varExpX, varExpY) %>% as_tibble()
-colnames(df) = c("Loss", "varExpX1", "varExpX2", "varExpX3", "varExpY")
-
-df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value)) + facet_wrap(~name,scale="free_y") + geom_bar(stat="identity")
-
-df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
-
-bestIndex = 30
-model_whz80 = ACMTFR_models[[bestIndex]]
-```
-
-```{r find best model pi=0.85}
-ACMTFR_models = readRDS("./ACMTFR_model_whz85.RDS")
+```{r find best model pi=0.95}
+ACMTFR_models = readRDS("./ACMTFR_model_whz95.RDS")
 
 iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
 loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
@@ -194,35 +187,8 @@ df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y
 
 df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
 
-bestIndex = 99
-model_whz85 = ACMTFR_models[[bestIndex]]
-```
-```{r find best model intermediate}
-model_whz851 = acmtfr_opt(Z, Ynorm, 1, pi=0.851, method="L-BFGS", nstart=10, numCores=10)
-model_whz852 = acmtfr_opt(Z, Ynorm, 1, pi=0.852, method="L-BFGS", nstart=10, numCores=10)
-model_whz853 = acmtfr_opt(Z, Ynorm, 1, pi=0.853, method="L-BFGS", nstart=10, numCores=10)
-model_whz854 = acmtfr_opt(Z, Ynorm, 1, pi=0.854, method="L-BFGS", nstart=10, numCores=10)
-model_whz855 = acmtfr_opt(Z, Ynorm, 1, pi=0.855, method="L-BFGS", nstart=10, numCores=10)
-model_whz856 = acmtfr_opt(Z, Ynorm, 1, pi=0.856, method="L-BFGS", nstart=10, numCores=10)
-model_whz857 = acmtfr_opt(Z, Ynorm, 1, pi=0.857, method="L-BFGS", nstart=10, numCores=10)
-model_whz858 = acmtfr_opt(Z, Ynorm, 1, pi=0.858, method="L-BFGS", nstart=10, numCores=10)
-model_whz859 = acmtfr_opt(Z, Ynorm, 1, pi=0.859, method="L-BFGS", nstart=10, numCores=10)
-model_whz86 = acmtfr_opt(Z, Ynorm, 1, pi=0.86, method="L-BFGS", nstart=10, numCores=10)
-# iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
-# loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
-# varExpX = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExp}))
-# varExpY = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExpY}))
-# # cor1_2 = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){cor(x$Fac[[1]][,1],x$Fac[[1]][,2])}))
-# 
-# df = cbind(loss, varExpX, varExpY) %>% as_tibble()
-# colnames(df) = c("Loss", "varExpX1", "varExpX2", "varExpX3", "varExpY")
-# 
-# df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value)) + facet_wrap(~name,scale="free_y") + geom_bar(stat="identity")
-# 
-# df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
-# 
-# bestIndex = 69
-# model_whz851 = ACMTFR_models[[bestIndex]]
+bestIndex = 10
+model_whz95 = ACMTFR_models[[bestIndex]]
 ```
 
 ```{r find best model pi=0.90}
@@ -241,12 +207,12 @@ df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y
 
 df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
 
-bestIndex = 35
+bestIndex = 91
 model_whz90 = ACMTFR_models[[bestIndex]]
 ```
 
-```{r find best model pi=0.95}
-ACMTFR_models = readRDS("./ACMTFR_model_whz95.RDS")
+```{r find best model pi=0.85}
+ACMTFR_models = readRDS("./ACMTFR_model_whz85.RDS")
 
 iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
 loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
@@ -261,8 +227,68 @@ df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y
 
 df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
 
-bestIndex = 69
-model_whz95 = ACMTFR_models[[bestIndex]]
+bestIndex = 88
+model_whz85 = ACMTFR_models[[bestIndex]]
+```
+
+```{r find best model pi=0.80}
+ACMTFR_models = readRDS("./ACMTFR_model_whz80.RDS")
+
+iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
+loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
+varExpX = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExp}))
+varExpY = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExpY}))
+# cor1_2 = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){cor(x$Fac[[1]][,1],x$Fac[[1]][,2])}))
+
+df = cbind(loss, varExpX, varExpY) %>% as_tibble()
+colnames(df) = c("Loss", "varExpX1", "varExpX2", "varExpX3", "varExpY")
+
+df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value)) + facet_wrap(~name,scale="free_y") + geom_bar(stat="identity")
+
+df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
+
+bestIndex = 26
+model_whz80 = ACMTFR_models[[bestIndex]]
+```
+
+```{r find best model pi=0.75}
+ACMTFR_models = readRDS("./ACMTFR_model_whz75.RDS")
+
+iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
+loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
+varExpX = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExp}))
+varExpY = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExpY}))
+# cor1_2 = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){cor(x$Fac[[1]][,1],x$Fac[[1]][,2])}))
+
+df = cbind(loss, varExpX, varExpY) %>% as_tibble()
+colnames(df) = c("Loss", "varExpX1", "varExpX2", "varExpX3", "varExpY")
+
+df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value)) + facet_wrap(~name,scale="free_y") + geom_bar(stat="identity")
+
+df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
+
+bestIndex = 79
+model_whz75 = ACMTFR_models[[bestIndex]]
+```
+
+```{r find best model pi=0.50}
+ACMTFR_models = readRDS("./ACMTFR_model_whz50.RDS")
+
+iter = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$iter}))
+loss = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$f}))
+varExpX = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExp}))
+varExpY = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$varExpY}))
+# cor1_2 = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){cor(x$Fac[[1]][,1],x$Fac[[1]][,2])}))
+
+df = cbind(loss, varExpX, varExpY) %>% as_tibble()
+colnames(df) = c("Loss", "varExpX1", "varExpX2", "varExpX3", "varExpY")
+
+df %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% ggplot(aes(x=index,y=value)) + facet_wrap(~name,scale="free_y") + geom_bar(stat="identity")
+
+df %>% mutate(index=1:nrow(.)) %>% arrange(Loss)
+
+bestIndex = 78
+model_whz50 = ACMTFR_models[[bestIndex]]
 ```
 
 ```{r plot the model}
@@ -393,61 +419,45 @@ i=processedMilkMetab$mode3 %>% mutate(Component_1=NPLS_milkMetab$Fac[[3]][,1]) %
 ggarrange(a,b,c,d,e,f,g,h,i, nrow=3, ncol=3)
 ```
 
-```{r check associations of the subject mode}
-
-# 
-# checkAssociations = function(loadings, comp=1){
-#   a = Jakobsen2025$subjectMeta_BMI %>% mutate(loading = loadings) %>% ggplot(aes(x=loading,y=BMI)) + geom_point() + stat_cor()
-#   b = Jakobsen2025$subjectMeta_BMI %>% mutate(loading = loadings) %>% ggplot(aes(x=as.factor(BMI.group),y=loading)) + geom_boxplot()
-#   c = Jakobsen2025$subjectMeta_BMI %>% mutate(loading = loadings) %>% ggplot(aes(x=loading,y=whz.6m)) + geom_point() + stat_cor()
-#   d = Jakobsen2025$subjectMeta_BMI %>% mutate(loading = loadings) %>% filter(C.section != "NA") %>% ggplot(aes(x=as.factor(C.section),y=loading)) + geom_boxplot() + stat_compare_means()
-#   e = Jakobsen2025$subjectMeta_BMI %>% mutate(loading = loadings) %>% filter(Secretor != "NA") %>% ggplot(aes(x=as.factor(Secretor),y=loading)) + geom_boxplot() + stat_compare_means()
-#   f = Jakobsen2025$subjectMeta_BMI %>% mutate(loading = loadings) %>% filter(Lewis != "NA") %>% ggplot(aes(x=as.factor(Lewis),y=loading)) + geom_boxplot() + stat_compare_means()
-#   ggarrange(a,b,c,d,e,f)
-# }
-# 
-# checkAssociations(model_bmiX_2$Fac[[1]][,1])
-# checkAssociations(model_bmiX_2$Fac[[1]][,2])
-# 
-# checkAssociations(model_bmi25$Fac[[1]][,1])
-# checkAssociations(model_bmi25$Fac[[1]][,2])
-# 
-# checkAssociations(model_bmi50$Fac[[1]][,1])
-# checkAssociations(model_bmi50$Fac[[1]][,2])
-# 
-# checkAssociations(model_bmi75$Fac[[1]][,1])
-# checkAssociations(model_bmi75$Fac[[1]][,2])
-
-# NPLS
-# checkAssociations(Jakobsen2025$homogenizedSubjectMetadata %>% left_join(NPLS_faeces_mode1 %>% mutate(subject = as.character(subject))) %>% select(loading) %>% pull())
-# checkAssociations(Jakobsen2025$homogenizedSubjectMetadata %>% left_join(NPLS_milk_mode1 %>% mutate(subject = as.character(subject))) %>% select(loading) %>% pull())
-# checkAssociations(Jakobsen2025$homogenizedSubjectMetadata %>% left_join(NPLS_milkMetab_mode1 %>% mutate(subject = as.character(subject))) %>% select(loading) %>% pull())
-```
-
 ```{r test overall associations using PERMANOVA}
-# set.seed(123)
-# 
-# testOverallAssociations = function(model){
-#   mask = !is.na(Jakobsen2025$subjectMeta_BMI$C.section)
-# 
-#   # PERMANOVA for each metadata variable
-#   adonis_birth <- adonis2(model$Fac[[1]][mask,] ~ Jakobsen2025$subjectMeta_BMI$C.section[mask], method="euclidean")
-#   adonis_secretor <- adonis2(model$Fac[[1]] ~ Jakobsen2025$subjectMeta_BMI$Secretor, method="euclidean")
-#   adonis_lewis <- adonis2(model$Fac[[1]] ~ Jakobsen2025$subjectMeta_BMI$Lewis, method="euclidean")
-#   
-#   # Print results
-#   return(c(adonis_birth$`Pr(>F)`[1], adonis_secretor$`Pr(>F)`[1], adonis_lewis$`Pr(>F)`[1]))
-# }
-# 
-# result = matrix(NA, nrow=6, ncol=3)
-# result[1,] = testOverallAssociations(model_bmi25)
-# result[2,] = testOverallAssociations(model_bmi50)
-# result[3,] = testOverallAssociations(model_bmi75)
-# result[4,] = testOverallAssociations(model_bmi90)
-# result[5,] = testOverallAssociations(model_bmi95)
-# result[6,] = testOverallAssociations(model_bmiX_2)
-# 
-# adjusted_result = matrix(p.adjust(result, "BH"), nrow=6, ncol=3)
+set.seed(123)
+
+testMetadata = function(model, metadata){
+  transformedSubjectLoadings = transformPARAFACloadings(model$Fac, 1)
+  
+  result = adonis2(transformedSubjectLoadings ~ BMI + whz.6m + C.section + Secretor + Lewis, data=metadata, method="euclidean", by="margin", permutations=9999, na.action=na.omit)
+  
+  return(result)
+}
+
+testMetadata(NPLS_faecal, newFaeces$mode1)
+testMetadata(NPLS_milk, newFaeces$mode1)
+testMetadata(NPLS_milkMetab, newFaeces$mode1)
+
+testMetadata(model_whz50, newFaeces$mode1)
+testMetadata(model_whz75, newFaeces$mode1)
+testMetadata(model_whz80, newFaeces$mode1)
+testMetadata(model_whz85, newFaeces$mode1)
+testMetadata(model_whz90, newFaeces$mode1)
+testMetadata(model_whz95, newFaeces$mode1)
+testMetadata(model_ACMTF, newFaeces$mode1)
+
+uncorrectedP = matrix(c(0.1113,0.0106,0.2240,0.5513,0.0989,0.0090,0.0002,0.2506,0.6816,0.8875,0.0165,0.0030,0.7277,0.0001,0.0062,0.7541,0.0001,0.7495,0.0227,0.5829,0.8193,0.0001,0.5866,0.0482,0.4912,0.4453,0.0001,0.4736,0.1216,0.3850,0.0178,0.0001,0.3016,0.6917,0.0708,0.0004,0.8437,0.2919,0.1341,0.0596,0.0007,0.5690,0.2213,0.0001,0.0602,0.0005,0.8317,0.2078,0.0001,0.0685), nrow=5, ncol=10)
+apply(uncorrectedP, 2, FUN=function(x){p.adjust(x,"BH")}) # BH per dataset
+
+temp = newFaeces$mode1 %>% mutate(Component_1 = NPLS_milkMetab$Fac[[1]][,1], Component_2 = NPLS_milkMetab$Fac[[1]][,2])
+summary(lm(BMI ~ Component_1 + Component_2, data=temp))
+summary(lm(whz.6m ~ Component_1 + Component_2, data=temp))
+summary(lm(Secretor ~ Component_1 + Component_2, data=temp))
+summary(lm(Lewis ~ Component_1 + Component_2, data=temp))
+
+temp = newFaeces$mode1 %>% mutate(Component_1 = model_whz95$Fac[[1]][,1], Component_2 = model_whz95$Fac[[1]][,2])
+summary(lm(BMI ~ Component_1 + Component_2, data=temp))
+summary(lm(Secretor ~ Component_1 + Component_2, data=temp))
+
+temp = newFaeces$mode1 %>% mutate(Component_1 = model_ACMTF$Fac[[1]][,1], Component_2 = model_ACMTF$Fac[[1]][,2])
+summary(lm(BMI ~ Component_1 + Component_2, data=temp))
+summary(lm(Secretor ~ Component_1 + Component_2, data=temp))
 ```
 
 ```{r test associations per component}
@@ -536,46 +546,6 @@ df = rbind(result_NPLS1, result_NPLS2, result_NPLS3, result_whz80, result_whz850
 corrected_df = signif(matrix(p.adjust(df, "BH"), dim(df)), 2)
 ```
 
-```{r pictures for age}
-a=cbind(NPLS_faecal$Fac[[1]], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("NPLS faeces")
-b=cbind(NPLS_milk$Fac[[1]], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("NPLS milk")
-c=cbind(NPLS_milkMetab$Fac[[1]], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("NPLS milkMetab")
-
-d=cbind(model_bmi80$Fac[[1]][,1], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("pi=0.80 (1)")
-e=cbind(model_bmi80$Fac[[1]][,2], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 2") + xlab("ppBMI") + ggtitle("pi=0.80 (2)")
-
-f=cbind(model_bmi85$Fac[[1]][,1], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("pi=0.85 (1)")
-g=cbind(model_bmi85$Fac[[1]][,2], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 2") + xlab("ppBMI") + ggtitle("pi=0.85 (2)")
-
-h=cbind(model_bmi90$Fac[[1]], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("pi=0.90 (1)")
-
-i=cbind(model_bmi95$Fac[[1]], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("pi=0.95 (1)")
-
-j=cbind(model_ACMTF$Fac[[1]], processedFaeces$mode1$BMI) %>% as_tibble() %>% ggplot(aes(y=V1,x=V2)) + geom_point() + stat_cor() + ylab("Component 1") + xlab("ppBMI") + ggtitle("pi=1 (1)")
-
-ggarrange(a,b,c,d,e,f,g,h,i,j)
-```
-
-```{r pictures for age 2}
-a=cbind(NPLS_faecal$Fac[[1]], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("NPLS faeces")
-b=cbind(NPLS_milk$Fac[[1]], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("NPLS milk")
-c=cbind(NPLS_milkMetab$Fac[[1]], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("NPLS milkMetab")
-
-d=cbind(model_bmi80$Fac[[1]][,1], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("pi=0.80 (1)")
-e=cbind(model_bmi80$Fac[[1]][,2], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 2") + xlab("Secretor status") + ggtitle("pi=0.80 (2)")
-
-f=cbind(model_bmi85$Fac[[1]][,1], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("pi=0.85 (1)")
-g=cbind(model_bmi85$Fac[[1]][,2], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 2") + xlab("Secretor status") + ggtitle("pi=0.85 (2)")
-
-h=cbind(model_bmi90$Fac[[1]], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("pi=0.90 (1)")
-
-i=cbind(model_bmi95$Fac[[1]], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("pi=0.95 (1)")
-
-j=cbind(model_ACMTF$Fac[[1]], processedFaeces$mode1$Secretor) %>% as_tibble() %>% ggplot(aes(y=V1,x=as.factor(V2))) + geom_boxplot() + stat_compare_means(comparisons=list(c("0","1")),label="p.signif") + ylab("Component 1") + xlab("Secretor status") + ggtitle("pi=1 (1)")
-
-ggarrange(a,b,c,d,e,f,g,h,i,j)
-```
-
 ```{r compare Y predictions}
 cbind(model_bmi80$Yhat, model_bmi85$Yhat, model_bmi90$Yhat, model_bmi95$Yhat, Ynorm) %>%
   as_tibble() %>%
@@ -614,9 +584,9 @@ tucker_congruence <- function(x, y, ignore_sign = TRUE) {
 ```
 
 ```{r plot lambdas per model}
-methods = c("pi=0.80", "pi=0.85", "pi=0.852", "pi=0.854", "pi=0.856", "pi=0.858", "pi=0.86", "pi=0.90", "pi=1")
+methods = c("pi=0.50", "pi=0.75", "pi=0.80", "pi=0.85", "pi=0.90", "pi=0.95 (1)", "pi=0.95 (2)", "pi=1 (1)", "pi=1 (2)")
 
-cbind(model_whz80$Fac[[8]], model_whz85$Fac[[8]], model_whz852$Fac[[8]], model_whz854$Fac[[8]], model_whz856$Fac[[8]], model_whz858$Fac[[8]], model_whz86$Fac[[8]], model_whz90$Fac[[8]], model_ACMTF$Fac[[8]]) %>%
+cbind(model_whz50$Fac[[8]], model_whz75$Fac[[8]], model_whz80$Fac[[8]], model_whz85$Fac[[8]], model_whz90$Fac[[8]], model_whz95$Fac[[8]], model_ACMTF$Fac[[8]]) %>%
   t() %>%
   as_tibble() %>%
   mutate(model=1:9) %>%
@@ -632,7 +602,7 @@ cbind(model_whz80$Fac[[8]], model_whz85$Fac[[8]], model_whz852$Fac[[8]], model_w
 ```
 
 ```{r tucker congruence for subject loadings}
-df = cbind(NPLS_faecal$Fac[[1]], NPLS_milk$Fac[[1]], NPLS_milkMetab$Fac[[1]], model_whz80$Fac[[1]], model_whz85$Fac[[1]], model_whz852$Fac[[1]], model_whz854$Fac[[1]], model_whz856$Fac[[1]], model_whz858$Fac[[1]], model_whz86$Fac[[1]], model_whz90$Fac[[1]], model_ACMTF$Fac[[1]])
+df = cbind(NPLS_faecal$Fac[[1]], NPLS_milk$Fac[[1]], NPLS_milkMetab$Fac[[1]], model_whz50$Fac[[1]], model_whz75$Fac[[1]], model_whz80$Fac[[1]], model_whz85$Fac[[1]], model_whz90$Fac[[1]], model_whz95$Fac[[1]], model_ACMTF$Fac[[1]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 
@@ -642,7 +612,7 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS Faecal", "NPLS Milk", "NPLS MilkMetab", "pi=0.80", "pi=0.85", "pi=0.852", "pi=0.854", "pi=0.856", "pi=0.858", "pi=0.86", "pi=0.90", "pi=1")
+methods = c("NPLS Faecal", "NPLS Milk", "NPLS MilkMetab (1)", "NPLS MilkMetab (2)", "pi=0.50", "pi=0.75", "pi=0.80", "pi=0.85", "pi=0.90", "pi=0.95 (1)", "pi=0.95 (2)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
@@ -661,7 +631,7 @@ congruence_matrix %>%
 ```{r tucker congruence for faecal microbiome}
 # NPLS_faeces_mode2 = read.csv("./Data/NPLS_milk_bmi_mode2.csv", header=FALSE) %>% as_tibble()
 
-df = cbind(NPLS_faecal$Fac[[2]], model_whz80$Fac[[2]], model_whz85$Fac[[2]], model_whz852$Fac[[2]], model_whz854$Fac[[2]], model_whz856$Fac[[2]], model_whz858$Fac[[2]], model_whz86$Fac[[2]], model_whz90$Fac[[2]], model_ACMTF$Fac[[2]])
+df = cbind(NPLS_faecal$Fac[[2]], model_whz50$Fac[[2]], model_whz75$Fac[[2]], model_whz80$Fac[[2]], model_whz85$Fac[[2]], model_whz90$Fac[[2]], model_whz95$Fac[[2]], model_ACMTF$Fac[[2]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 
@@ -671,7 +641,7 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS Faecal", "pi=0.80", "pi=0.85", "pi=0.852", "pi=0.854", "pi=0.856", "pi=0.858", "pi=0.86", "pi=0.90", "pi=1")
+methods = c("NPLS Faecal", "pi=0.50", "pi=0.75", "pi=0.80", "pi=0.85", "pi=0.90", "pi=0.95 (1)", "pi=0.95 (2)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
@@ -688,9 +658,7 @@ congruence_matrix %>%
 ```
 
 ```{r tucker congruence for HM microbiome}
-# NPLS_faeces_mode2 = read.csv("./Data/NPLS_milk_bmi_mode2.csv", header=FALSE) %>% as_tibble()
-
-df = cbind(NPLS_milk$Fac[[2]], model_whz80$Fac[[4]], model_whz85$Fac[[4]], model_whz852$Fac[[4]], model_whz854$Fac[[4]], model_whz856$Fac[[4]], model_whz858$Fac[[4]], model_whz86$Fac[[4]], model_whz90$Fac[[4]], model_ACMTF$Fac[[4]])
+df = cbind(NPLS_milk$Fac[[2]], model_whz50$Fac[[4]], model_whz75$Fac[[4]], model_whz80$Fac[[4]], model_whz85$Fac[[4]], model_whz90$Fac[[4]], model_whz95$Fac[[4]], model_ACMTF$Fac[[4]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 
@@ -700,7 +668,7 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS Milk", "pi=0.80", "pi=0.85", "pi=0.852", "pi=0.854", "pi=0.856", "pi=0.858", "pi=0.86", "pi=0.90", "pi=1")
+methods = c("NPLS Milk", "pi=0.50", "pi=0.75", "pi=0.80", "pi=0.85", "pi=0.90", "pi=0.95 (1)", "pi=0.95 (2)", "pi=1 (1)", "pi=1 (2)")
 
 congruence_matrix %>%
   as_tibble() %>%
@@ -717,9 +685,7 @@ congruence_matrix %>%
 ```
 
 ```{r tucker congruence for HM metabolome}
-# NPLS_faeces_mode2 = read.csv("./Data/NPLS_milk_bmi_mode2.csv", header=FALSE) %>% as_tibble()
-
-df = cbind(NPLS_milkMetab$Fac[[2]], model_whz80$Fac[[6]], model_whz85$Fac[[6]], model_whz852$Fac[[6]], model_whz854$Fac[[6]], model_whz856$Fac[[6]], model_whz858$Fac[[6]], model_whz86$Fac[[6]], model_whz90$Fac[[6]], model_ACMTF$Fac[[6]])
+df = cbind(NPLS_milkMetab$Fac[[2]], model_whz50$Fac[[6]], model_whz75$Fac[[6]], model_whz80$Fac[[6]], model_whz85$Fac[[6]], model_whz90$Fac[[6]], model_whz95$Fac[[6]], model_ACMTF$Fac[[6]])
 
 congruence_matrix = matrix(NA, ncol=ncol(df), nrow=ncol(df))
 
@@ -729,8 +695,7 @@ for(i in 1:ncol(df)){
   }
 }
 
-methods = c("NPLS Metab", "pi=0.80", "pi=0.85", "pi=0.852", "pi=0.854", "pi=0.856", "pi=0.858", "pi=0.86", "pi=0.90", "pi=1")
-
+methods = c("NPLS MilkMetab (1)", "NPLS MilkMetab (2)", "pi=0.50", "pi=0.75", "pi=0.80", "pi=0.85", "pi=0.90", "pi=0.95 (1)", "pi=0.95 (2)", "pi=1 (1)", "pi=1 (2)")
 congruence_matrix %>%
   as_tibble() %>%
   mutate(index=1:length(methods)) %>%
@@ -1052,119 +1017,116 @@ c = df %>%
 ggarrange(a,b,c, nrow=1)
 ```
 
-```{r varExp plot}
-# Load required packages
-library(tidyverse)
-library(ggpattern)
-library(scales)  # for trans_new()
+```{r feature mode}
+Xhat = CMTFtoolbox::reinflateFac(model_whz85$Fac, Z)
+cor(Xhat[[1]][,1,1], newFaeces$mode1$whz.6m) # flip
+cor(Xhat[[2]][,1,1], newFaeces$mode1$whz.6m) # flip
+cor(Xhat[[3]][,1,1], newFaeces$mode1$whz.6m)
 
-# 1. Define a custom transformation for a "broken" y axis.
-#    Values <= breakpoint are unchanged; values > breakpoint are compressed.
-#    Here we choose breakpoint = 15 and a factor = 5.67 so that 100 maps near 30.
-broken_trans <- function(breakpoint = 15, factor = 5.67) {
-    trans_new(
-        name = paste0("broken_", breakpoint, "_", factor),
-        transform = function(x) {
-            ifelse(x <= breakpoint, x, breakpoint + (x - breakpoint) / factor)
-        },
-        inverse = function(x) {
-            ifelse(x <= breakpoint, x, breakpoint + (x - breakpoint) * factor)
-        },
-        domain = c(0, Inf)
-    )
-}
+# Faeces
+df = processedFaeces$mode2 %>% 
+  mutate(Comp=-1*model_whz85$Fac[[2]][,1]) %>%
+  arrange(Comp) %>%
+  mutate(index=1:nrow(.), name=paste0(V7," ", V8)) %>%
+  mutate(Genus = gsub("g__", "", V7), Species = gsub("s__", "", V8)) %>% 
+  mutate(Species = str_split_fixed(Species, "_", 2)[,2]) %>% 
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "sp."), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "organism"), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "bacterium"), "", .x))) %>%
+  filter(index %in% c(1:10, 84:93))
 
-# 2. Create the original 3x3 data matrix and assign column names.
-df <- matrix(
-    c(5.77, 5.31, 4.32,    # Block 1: values for NPLS, ACMTF, ACMTF-R
-      12.85, 10.96, 5.90,    # Block 2
-      1.08, 0.86, 1.15),    # Block 3
-    nrow = 3, byrow = FALSE
-)
-colnames(df) <- c("NPLS", "ACMTF", "ACMTF-R")
+df[df$Genus == "" & df$Species == "", "Species"] = "Unknown"
+df[df$Species == "", "Species"] = "sp."
+df$name = paste0(df$Genus, " ", df$Species)
 
-# 3. Tidy the original data.
-#    Create a column "orig_block" to track the original block number ("1", "2", or "3").
-df_tidy <- as_tibble(df) %>%
-    mutate(orig_block = as.character(1:3)) %>%  # original blocks
-    pivot_longer(
-        cols = -orig_block,
-        names_to  = "method",
-        values_to = "value"
-    ) %>%
-    # Here, the x-axis "block" is the original block.
-    mutate(block = orig_block)
+a=df %>%
+  ggplot(aes(x=Comp,y=as.factor(index),fill=as.factor(V3))) +
+  geom_bar(stat="identity", col="black") +
+  scale_y_discrete(label=df$name) +
+  xlab("Loading") +
+  ylab("") +
+  theme(text=element_text(size=16)) +
+  scale_fill_manual(name="Phylum", values=hue_pal()(4), labels=c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria"))
 
-# 4. Add the extra block "Y" rows.
-#    For NPLS: one extra row per block with the provided values.
-df_extra_npls <- tibble(
-    method     = "NPLS",
-    block      = "Y",               # extra block
-    value      = c(12.30, 11.22, 31.04),
-    orig_block = c("1", "2", "3")    # so we know which NPLS facet it belongs to
-)
+# Milk
+df = processedMilk$mode2 %>% mutate(Comp=-1*model_whz85$Fac[[4]][,1]) %>%
+  arrange(Comp) %>%
+  mutate(index=1:nrow(.), name=paste0(V7," ", V8)) %>%
+  mutate(Genus = gsub("g__", "", V7), Species = gsub("s__", "", V8)) %>% 
+  mutate(Species = str_split_fixed(Species, "_", 2)[,2]) %>% 
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "sp."), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "organism"), "", .x))) %>%
+  mutate(dplyr::across(.cols = Species, .fns = ~ dplyr::if_else(stringr::str_detect(.x, "bacterium"), "", .x))) %>%
+  filter(index %in% c(1:10, 110:119))
 
-#    For ACMTF-R: add one extra row.
-df_extra_acmtfr <- tibble(
-    method = "ACMTF-R",
-    block  = "Y",
-    value  = 98.86
-)
+df[df$Genus == "" & df$Species == "", "Species"] = "Unknown"
+df[df$Species == "", "Species"] = "sp."
+df$name = paste0(df$Genus, " ", df$Species)
 
-#    For ACMTF: add one extra row with a value of 0.53.
-df_extra_acmtf <- tibble(
-    method = "ACMTF",
-    block  = "Y",
-    value  = 7.13
-)
+b=df %>%
+  ggplot(aes(x=Comp,y=as.factor(index),fill=as.factor(V3))) +
+  geom_bar(stat="identity", col="black") +
+  scale_y_discrete(label=df$name) +
+  xlab("Loading") +
+  ylab("") +
+  theme(text=element_text(size=16)) +
+  scale_fill_manual(name="Phylum", values=hue_pal()(4)[-2], labels=c("Actinobacteriota", "Firmicutes", "Proteobacteria"))
 
-# 5. Combine all the data.
-#    Specify the x-axis factor levels so that "Y" appears as the fourth level.
-df_all <- bind_rows(df_tidy, df_extra_npls, df_extra_acmtfr, df_extra_acmtf) %>%
-    mutate(block = factor(block, levels = c("1", "2", "3", "Y")))
+# MilkMetab
+df = processedMilkMetab$mode2 %>% mutate(Comp=model_whz85$Fac[[6]][,1]) %>% arrange(Comp) %>% mutate(index=1:nrow(.), name=Metabolite) %>% filter(index %in% c(1:10, 61:70))
+c=df %>%
+  ggplot(aes(x=Comp,y=as.factor(index),fill=as.factor(Class),pattern=as.factor(Class))) +
+  geom_bar_pattern(stat="identity",
+                   colour="black",
+                   pattern="stripe",
+                   pattern_fill="black",
+                   pattern_density=0.2,
+                   pattern_spacing=0.05,
+                   pattern_angle=45,
+                   pattern_size=0.2) +
+  scale_y_discrete(label=df$name) +
+  xlab("Loading") +
+  ylab("") +
+  guides(fill=guide_legend(title="Class")) +
+  theme(text=element_text(size=16))
 
-# 6. Define custom x-axis labels.
-#    Blocks 1–3 get descriptive labels; block "Y" is renamed to "Infant\n6-month\nWHZ".
-block_labels <- c(
-    "1" = "Infant\nfaecal\nmicrobiome",
-    "2" = "Mother\nmilk\nmicrobiome",
-    "3" = "Mother\nmilk\nmetabolome",
-    "Y" = "Maternal\nppBMI"
-)
+```
+```{r plot time mode}
+d = model_whz85$Fac[[3]] %>%
+  as_tibble() %>%
+  mutate(time=c(30,60,90)) %>% 
+  pivot_longer(-time) %>%
+  ggplot(aes(x=time,y=value)) + 
+  geom_line() + 
+  geom_point() +
+  ylim(0,1) +
+  xlab("Time point [days]") +
+  ylab("Loading") +
+  theme(text=element_text(size=16))
 
-# 7. Create a facet grouping variable.
-#    For NPLS, each facet is labeled with the method and the corresponding original block label,
-#    so that each NPLS facet only shows its own used blocks.
-#    For ACMTF and ACMTF-R, the facet label remains simply the method name.
-df_all <- df_all %>%
-    mutate(facet_group = case_when(
-        method == "NPLS" ~ paste("NPLS:", block_labels[orig_block]),
-        TRUE           ~ method
-    ))
+e = (-1*model_whz85$Fac[[5]]) %>%
+  as_tibble() %>%
+  mutate(time=c(0,30,60,90)) %>% 
+  pivot_longer(-time) %>%
+  ggplot(aes(x=time,y=value)) + 
+  geom_line() + 
+  geom_point() +
+  ylim(0,1) +
+  xlab("Time point [days]") +
+  ylab("Loading") +
+  theme(text=element_text(size=16))
 
-# 8. Create the plot.
-#    Here we use facet_grid with free x scales and free space so that the widths
-#    of the facets are proportional to the number of x categories they display.
-p <- ggplot(df_all, aes(x = block, y = value, fill = method)) +
-  geom_col(position = position_dodge(width = 0.9), color = "black") +
-  facet_grid(. ~ facet_group, scales = "free_x", space = "free_x") +
-  scale_fill_manual(
-    values = c("NPLS"    = "grey",
-               "ACMTF"   = "grey",
-               "ACMTF-R" = "grey")
-  ) +
-  scale_x_discrete(labels = block_labels, drop = TRUE) +
-  xlab("") +
-  ylab("Variance explained (%)") +
-  # theme_bw(base_size = 12) +
-  theme(legend.position = "none") +
-  scale_y_continuous(
-    limits = c(0, 100),
-    trans  = broken_trans(breakpoint = 15, factor = 5.67),
-    # Specify breaks in the original units.
-    breaks = c(0, 5, 10, 15, 30, 50, 70, 90, 100),
-    labels = c(0, 5, 10, 15, 30, 50, 70, 90, 100)
-  )
+f = (-1*model_whz85$Fac[[7]]) %>%
+  as_tibble() %>%
+  mutate(time=c(0,30,60,90)) %>% 
+  pivot_longer(-time) %>%
+  ggplot(aes(x=time,y=value)) + 
+  geom_line() + 
+  geom_point() +
+  ylim(0,1) +
+  xlab("Time point [days]") +
+  ylab("Loading") +
+  theme(text=element_text(size=16))
 
-p
-``` 
+ggarrange(a,b,c,nrow=1,ncol=3)
+```
