@@ -129,27 +129,7 @@ inputLoadingsFac[[7]] = inputLoadings[[3]][,c(3,6,13)]
 X1_final = readRDS("./Sim2b_X1_Y_inside.RDS")
 X2_final = readRDS("./Sim2b_X2_Y_inside.RDS")
 X3_final = readRDS("./Sim2b_X3_Y_inside.RDS")
-Y_final = readRDS("./Sim2b_Y_Y_inside_1.RDS") # This is different every time
-```
-
-```{r prep}
-datasets = list(X1_final, X2_final, X3_final)
-modes = list(c(1,2,3),c(1,4,5),c(1,6,7))
-Z = setupCMTFdata(datasets, modes, normalize=FALSE)
-```
-
-```{r check cv outcome}
-# cv_01 = readRDS("./Sim2b_ACMTFR_model_selection_result0.1.RDS") # might be 5+
-# cv_02 = readRDS("./Sim2b_ACMTFR_model_selection_result0.2.RDS") # might be 5+
-# cv_03 = readRDS("./Sim2b_ACMTFR_model_selection_result0.3.RDS") # might be 5+
-# cv_04 = readRDS("./Sim2b_ACMTFR_model_selection_result0.4.RDS") # might be 5+
-# cv_05 = readRDS("./Sim2b_ACMTFR_model_selection_result0.5.RDS") # 5 comps
-# cv_06 = readRDS("./Sim2b_ACMTFR_model_selection_result0.6.RDS") # 
-# cv_07 = readRDS("./Sim2b_ACMTFR_model_selection_result0.7.RDS") # 
-# cv_08 = readRDS("./Sim2b_ACMTFR_model_selection_result0.8.RDS") # 
-# cv_09 = readRDS("./Sim2b_ACMTFR_model_selection_result0.9.RDS") # 5 comps but check degen
-# cv_095 = readRDS("./Sim2b_ACMTFR_model_selection_result0.95.RDS") # 5 comps but check degen
-# cv_1 should be 7 components
+# Y_final = readRDS("./Sim2_Y_Y_inside.RDS") # This is different every time
 ```
 
 # Analyze ACMTFR results
