@@ -36,23 +36,5 @@ Y = processedFaeces$mode1$whz.6m
 Ycnt = Y - mean(Y)
 Ynorm = Ycnt / norm(Ycnt, "2")
 
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=2, pi=1, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz1.RDS")
-
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=2, pi=0.95, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz95.RDS")
-
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.9, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz90.RDS")
-
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.85, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz85.RDS")
-
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.8, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz80.RDS")
-
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.75, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz75.RDS")
-
-model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.50, nstart=100, numCores=parallel::detectCores(), allOutput=TRUE)
-saveRDS(model, "./ACMTFR_model_whz50.RDS")
+model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.875, nstart=100, numCores=parallel::detectCores())
+saveRDS(model, "./ACMTFR_model_whz_test.RDS")

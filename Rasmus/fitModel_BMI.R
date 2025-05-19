@@ -36,11 +36,14 @@ Y = processedFaeces$mode1$BMI
 Ycnt = Y - mean(Y)
 Ynorm = Ycnt / norm(Ycnt, "2")
 
-pi_values = c(0.25, 0.50, 0.75, 0.80, 0.85, 0.90, 0.95)
-for(i in 1:length(pi_values)){
-  pi = pi_values[i]
-  result = CMTFtoolbox::ACMTFR_modelSelection(datasets, modes, Ynorm, maxNumComponents=10, pi=pi, nstart=10, numCores=parallel::detectCores(), method="L-BFGS", cvFolds=10, abs_tol=1e-6, rel_tol=1e-6, grad_tol=1e-6)
-  saveRDS(result, paste0("./CV_small_BMI_", pi, ".RDS"))
-}
+model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.90, nstart=100, numCores=parallel::detectCores())
+saveRDS(model, "./ACMTFR_model_bmi90.RDS")
 
+model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.85, nstart=100, numCores=parallel::detectCores())
+saveRDS(model, "./ACMTFR_model_bmi85.RDS")
 
+model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.80, nstart=100, numCores=parallel::detectCores())
+saveRDS(model, "./ACMTFR_model_bmi80.RDS")
+
+model = CMTFtoolbox::acmtfr_opt(Z, Ynorm, numComponents=1, pi=0.75, nstart=100, numCores=parallel::detectCores())
+saveRDS(model, "./ACMTFR_model_bmi75.RDS")
