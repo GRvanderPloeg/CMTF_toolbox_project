@@ -1,0 +1,408 @@
+---
+title: "20241203_ACMTF_validation"
+author: "G.R. van der Ploeg"
+date: "2024-12-03"
+output: html_document
+---
+
+# Preamble
+```{r setup, include=FALSE}
+library(rTensor)
+library(CMTFtoolbox)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(scales)
+library(clue)
+```
+
+```{r model evaluation function}
+modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1),nrow=3,ncol=7)){
+  
+  # FMS
+  FMS1 = calculateFMS(modelFac[[1]], realFac[[1]])
+  FMS2 = calculateFMS(modelFac[[2]], realFac[[2]])
+  FMS3 = calculateFMS(modelFac[[3]], realFac[[3]])
+  FMS4 = calculateFMS(modelFac[[4]], realFac[[4]])
+  FMS5 = calculateFMS(modelFac[[5]], realFac[[5]])
+  FMS6 = calculateFMS(modelFac[[6]], realFac[[6]])
+  FMS7 = calculateFMS(modelFac[[7]], realFac[[7]])
+  
+  # Repair the distinct components to appear in the correct column
+  FMS2 = cbind(FMS2, matrix(rnorm(7*2), nrow=7, ncol=2))
+  FMS3 = cbind(FMS3, matrix(rnorm(7*2), nrow=7, ncol=2))
+  FMS4 = cbind(FMS4[,1:4], rnorm(7), FMS4[,5], rnorm(7))
+  FMS5 = cbind(FMS5[,1:4], rnorm(7), FMS5[,5], rnorm(7))
+  FMS6 = cbind(FMS6[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS6[,3])
+  FMS7 = cbind(FMS7[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS7[,3])
+  
+  # LSI
+  lambda_hat = abs(lambda_hat)
+  LSI = calculateLSI(lambda_hat, lambda_true)
+  
+  # Combine similarity matrices equally
+  similarityMatrix = (FMS1 + LSI)/2
+  
+  # Find best combination
+  mapping = clue::solve_LSAP(similarityMatrix, maximum=TRUE)
+  
+  # Return metrics
+  mappingMatrix = cbind(seq_along(mapping), mapping)
+  
+  mappingMatrix1 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,4,5),]
+  mappingMatrix2 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,4,6),]
+  mappingMatrix3 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,7),]
+
+  FMS1 = (sum(FMS1[mappingMatrix])) / 7
+  FMS2 = (sum(FMS2[mappingMatrix1])) / 5
+  FMS3 = (sum(FMS3[mappingMatrix1])) / 5
+  FMS4 = (sum(FMS4[mappingMatrix2])) / 5
+  FMS5 = (sum(FMS5[mappingMatrix2])) / 5
+  FMS6 = (sum(FMS6[mappingMatrix3])) / 3
+  FMS7 = (sum(FMS7[mappingMatrix3])) / 3
+
+  FMS_overall = FMS1 * FMS2 * FMS3 * FMS4 * FMS5 * FMS6 * FMS7
+  
+  lambda_hat_perm = lambda_hat[,mapping]
+  SSR = sum((lambda_true - lambda_hat_perm)^2)
+  LSI = 1 / (1 + SSR)
+  
+  result = list("FMS"=FMS_overall,
+                "FMS1"=FMS1,
+                "FMS2"=FMS2,
+                "FMS3"=FMS3,
+                "FMS4"=FMS4,
+                "FMS5"=FMS5,
+                "FMS6"=FMS6,
+                "FMS7"=FMS7,
+                "LSI"=LSI)
+  return(result)
+}
+
+calculateFMS = function(modelFac, realFac){
+  
+  similarityMatrix = matrix(0, nrow = ncol(modelFac), ncol = ncol(realFac))
+  
+  for (k in 1:ncol(modelFac)) {
+    for (l in 1:ncol(realFac)) {
+      vect1 = as.matrix(modelFac[, k])
+      vect2 = as.matrix(realFac[, l])
+      
+      # Cosine similarity
+      similarityMatrix[k, l] = abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+
+calculateLSI = function(lambda_hat, lambda_true){
+
+  similarityMatrix = matrix(NA, nrow=7, ncol=7)
+  
+  for(k in 1:7){
+    for(l in 1:7){
+      real = lambda_true[,k]
+      hat = lambda_hat[,l]
+      similarityMatrix[k,l] = 1 / (1 + sum((real - hat)^2))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+```
+
+```{r load input loadings}
+inputLoadings = readRDS("./Sim4_input_loadings_Y_outside_inside.RDS")
+
+# Reorganize into Fac object
+inputLoadingsFac = inputLoadings
+inputLoadingsFac[[2]] = inputLoadings[[2]][,c(1,4,7,9,11)]
+inputLoadingsFac[[3]] = inputLoadings[[3]][,c(1,4,7,9,11)]
+inputLoadingsFac[[4]] = inputLoadings[[2]][,c(2,5,8,10,12)]
+inputLoadingsFac[[5]] = inputLoadings[[3]][,c(2,5,8,10,12)]
+inputLoadingsFac[[6]] = inputLoadings[[2]][,c(3,6,13)]
+inputLoadingsFac[[7]] = inputLoadings[[3]][,c(3,6,13)]
+
+```
+
+```{r load datasets}
+X1_final = readRDS("./Sim4_X1_Y_outside_inside.RDS")
+X2_final = readRDS("./Sim4_X2_Y_outside_inside.RDS")
+X3_final = readRDS("./Sim4_X3_Y_outside_inside.RDS")
+Y_final = readRDS("./Sim4_Y_Y_outside_inside.RDS")
+```
+
+# Analyze ACMTF results - 7 components
+```{r load ACMTF models}
+ACMTFR_CV_models = readRDS("./Sim4_ACMTFR_CV_Y_outside_inside.RDS")
+ACMTFR_CV_params = readRDS("./Sim4_ACMTFR_CV_params_Y_outside_inside.RDS")
+```
+
+# ACMTFR
+```{r model selection}
+# Select only beta=1e-3 models
+mask = ACMTFR_CV_params[,1] == 1e-3
+models = ACMTFR_CV_models[mask]
+pi_values = ACMTFR_CV_params[mask,2]
+```
+
+```{r plot varExps}
+ACMTF_CV_varExpsX = do.call(rbind, lapply(models, FUN=function(x){x$varExp})) %>% as_tibble()
+ACMTF_CV_varExpsY = do.call(rbind, lapply(models, FUN=function(x){(x$varExpY)})) %>% as_tibble()
+colnames(ACMTF_CV_varExpsX) = c("X1", "X2", "X3")
+ACMTF_CV_varExpsX = ACMTF_CV_varExpsX %>% mutate(pi = pi_values)
+ACMTF_CV_varExps = ACMTF_CV_varExpsX %>% mutate(Y=ACMTF_CV_varExpsY$V1, pi = pi_values)
+
+ACMTF_CV_varExps %>% as_tibble() %>% filter(pi > 0) %>% pivot_longer(-pi) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_wrap(~name,nrow=3) + geom_boxplot() + xlab("Pi") + ylab("Variance explained (%)")
+```
+
+```{r plot lambda similarity}
+ACMTF_CV_lambda_similarity = do.call(rbind, lapply(models, FUN=function(x){lambda_similarity(x$Fac[[8]])}))
+ACMTF_CV_lambda_similarity = ACMTF_CV_lambda_similarity %>% as_tibble() %>% mutate(pi=pi_values, index=1:length(pi))
+
+ACMTF_CV_lambda_similarity %>% ggplot(aes(x=as.factor(pi),y=V1)) + geom_boxplot() + xlab("Pi") + ylab("Lambda similarity") + scale_y_log10()
+```
+
+```{r plot some lambda matrix examples}
+a=models[[6]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=1") + theme(legend.position="none")
+
+b=models[[5]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=0.8") + theme(legend.position="none")
+
+c=models[[9]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=0.4") + theme(legend.position="none")
+
+d=models[[391]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=0") + theme(legend.position="none")
+
+
+ggarrange(a,b,c,d, nrow=1, ncol=4)
+```
+```{r plot fms}
+ACMTF_CV_FMS1 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[1]], inputLoadingsFac[[1]], numComponents=7)})) %>% as_tibble()
+ACMTF_CV_FMS2 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[2]], inputLoadingsFac[[2]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS3 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[3]], inputLoadingsFac[[3]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS4 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[4]], inputLoadingsFac[[4]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS5 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[5]], inputLoadingsFac[[5]], numComponents=5)})) %>% as_tibble()
+ACMTF_CV_FMS6 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[6]], inputLoadingsFac[[6]], numComponents=3)})) %>% as_tibble()
+ACMTF_CV_FMS7 = do.call(rbind, lapply(models, FUN=function(x){calculateFMS(x$Fac[[7]], inputLoadingsFac[[7]], numComponents=3)})) %>% as_tibble()
+
+ACMTF_CV_FMS = cbind(ACMTF_CV_FMS1, ACMTF_CV_FMS2, ACMTF_CV_FMS3, ACMTF_CV_FMS4, ACMTF_CV_FMS5, ACMTF_CV_FMS6, ACMTF_CV_FMS7)
+colnames(ACMTF_CV_FMS) = c("FMS1", "FMS2", "FMS3", "FMS4", "FMS5", "FMS6", "FMS7")
+ACMTF_CV_FMS = ACMTF_CV_FMS %>% as_tibble() %>% mutate(X1 = FMS1 * FMS2 * FMS3, X2 = FMS1 * FMS4 * FMS5, X3 = FMS1 * FMS6 * FMS7, pi=pi_values, index=1:length(pi))
+
+ACMTF_CV_FMS %>% select(X1,X2,X3,pi) %>% pivot_longer(-pi) %>% ggplot(aes(x=as.factor(pi),y=value)) + facet_wrap(~name, ncol=3) + geom_boxplot() + xlab("Pi") + ylab("FMS")
+```
+
+```{r plot loss}
+ACMTF_CV_f = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+ACMTF_CV_f = ACMTF_CV_f %>% as_tibble() %>% mutate(pi=pi_values, index=1:length(pi))
+
+ACMTF_CV_f %>% filter(pi>0) %>% ggplot(aes(x=as.factor(pi),y=V1)) + geom_boxplot() + xlab("Pi") + ylab("Loss value") + scale_y_log10()
+```
+
+```{r plot FMS vs lambda similarity}
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% select(X1, X2, X3, pi, lambda_similarity) %>% pivot_longer(-c(pi, lambda_similarity)) %>% ggplot(aes(x=lambda_similarity,y=value)) + facet_grid(vars(name), vars(pi)) + geom_point() + scale_x_log10() + theme(legend.position="none") + xlab("Lambda similarity") + ylab("FMS")
+```
+```{r fraction of correct models}
+lambda_sim_threshold = 0.15
+fms_threshold = 0.9
+
+ACMTF_CV_FMS %>% mutate(lambda_similarity = ACMTF_CV_lambda_similarity$V1) %>% mutate(correct = (lambda_similarity <= lambda_sim_threshold) & (X1 >= fms_threshold) & (X2 >= fms_threshold) & (X3 >= fms_threshold)) %>% ggplot(aes(x=as.factor(pi),fill=correct)) + geom_bar(col="black") + xlab("Pi") + ylab("Number of models")
+```
+
+```{r how often are the components found}
+threshold = 0.95
+colours = hue_pal()(4)
+
+Yreal = readRDS("./Sim3_Y_Y_outside.RDS")
+Yreal = Yreal@data
+Yreal = as.matrix(Yreal)
+
+global1 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,1])))}))
+global2 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,2])))}))
+local1 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,3])))}))
+local2 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,4])))}))
+distinct1 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,5])))}))
+distinct2 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,6])))}))
+distinct3 = unlist(lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], inputLoadings[[1]][,7])))}))
+y_found = unlist(lapply(models, FUN=function(x){abs(cor(x$Yhat, Yreal))}))
+
+componentShapes = cbind(ACMTF_CV_FMS, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found)
+
+componentShapes %>% as_tibble() %>% select(pi, global1, global2, local1, local2, distinct1, distinct2, distinct3, y_found) %>% pivot_longer(-pi) %>% mutate(Found = value > threshold) %>% ggplot(aes(x=as.factor(pi),fill=Found)) + facet_wrap(~name) + geom_bar()
+
+componentShapes %>% as_tibble() %>% mutate(global1 = global1 < threshold, global2 = global2 < threshold, local1 = local1 < threshold, local2 = local2 < threshold, distinct1 = distinct1 < threshold, distinct2 = distinct2 < threshold, distinct3 = distinct3 < threshold) %>% mutate(Global = global1 + global2, Local = local1 + local2, Distinct = distinct1 + distinct2 + distinct3) %>% select(pi, Global, Local, Distinct) %>% pivot_longer(-pi) %>% mutate(name = factor(name, levels=c("Global", "Local", "Distinct"))) %>% ggplot(aes(x=as.factor(pi),fill=as.factor(value))) + facet_wrap(~name,nrow=3) + geom_bar(col="black") + labs(x="Pi",y="Number of models",fill="Number of components lost")
+```
+
+```{r comparison of some models}
+modelA = ACMTFR_CV_models[[13]] # pi 0.0
+modelB = ACMTFR_CV_models[[14]] # pi 0.2
+modelC = ACMTFR_CV_models[[15]] # pi 0.4
+modelD = ACMTFR_CV_models[[70]] # pi 0.6
+modelE = ACMTFR_CV_models[[17]] # pi 0.8
+modelF = ACMTFR_CV_models[[18]] # pi 1.0
+
+# Y
+df = cbind(modelA$Yhat, modelB$Yhat, modelC$Yhat, modelD$Yhat, modelE$Yhat, modelF$Yhat, Yreal) %>% as_tibble()
+colnames(df) = c("0.0", "0.2", "0.4", "0.6", "0.8", "1.0", "true")
+df %>% pivot_longer(-true) %>% ggplot(aes(x=true,y=value,col=as.factor(name))) + geom_point() + xlab("Y") + ylab("Yhat") + labs(color="Pi")
+
+# Test
+y_found = unlist(lapply(ACMTFR_CV_models, FUN=function(x){(sum(x$Yhat * Yreal) / (norm(x$Yhat, "2") * norm(Yreal, "2")))}))
+y_found = cbind(ACMTFR_CV_params, y_found) %>% as_tibble()
+colnames(y_found) = c("beta", "pi", "cosine")
+y_found %>% filter(beta==1e-3) %>% ggplot(aes(x=as.factor(pi),y=cosine)) + geom_boxplot() + stat_compare_means()
+```
+
+```{r inspect loss per iteration - pi}
+# # Use the same initialization across pi settings
+# model = ACMTFR_CV_models[[18]]
+# init = fac_to_vect(model$init)
+# alpha = 1
+# beta = rep(1e-3, 3)
+# epsilon = 1e-8
+# # pi is set per model
+# datasets = list(X1_final, X2_final, X3_final)
+# Y = as.matrix(Y_final@data)
+# modes = list(c(1,2,3),c(1,4,5),c(1,6,7))
+# Z = setupCMTFdata(datasets, modes, normalize=FALSE)
+# 
+# abs_tol=1e-10
+# rel_tol=1e-10
+# 
+# # High pi
+# pi = 0.9
+# fg = list("fn"=function(x){return(CMTFtoolbox::acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi))}, "gr"=function(x){return(CMTFtoolbox::acmtfr_gradient(x,Z,Y,alpha,beta,epsilon,pi))})
+# # ACMTF_high_pi = CMTFtoolbox::mize_runner(init, fg, abs_tol=abs_tol, rel_tol=rel_tol)
+# ACMTF_high_pi = readRDS("./ACMTF_high_pi.RDS")
+# 
+# # Normal pi
+# pi = 0.5
+# fg = list("fn"=function(x){return(CMTFtoolbox::acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi))}, "gr"=function(x){return(CMTFtoolbox::acmtfr_gradient(x,Z,Y,alpha,beta,epsilon,pi))})
+# # ACMTF_normal_pi = CMTFtoolbox::mize_runner(init, fg, abs_tol=abs_tol, rel_tol=rel_tol)
+# ACMTF_normal_pi = readRDS("./ACMTF_normal_beta.RDS")
+# 
+# # Low beta
+# pi = 0.1
+# fg = list("fn"=function(x){return(CMTFtoolbox::acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi))}, "gr"=function(x){return(CMTFtoolbox::acmtfr_gradient(x,Z,Y,alpha,beta,epsilon,pi))})
+# # ACMTF_low_pi = CMTFtoolbox::mize_runner(init, fg, abs_tol=abs_tol, rel_tol=rel_tol)
+# # ACMTF_low_pi = readRDS("./ACMTF_low_pi.RDS")
+# 
+# # Pi = 1
+# pi = 1
+# fg = list("fn"=function(x){return(CMTFtoolbox::acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi))}, "gr"=function(x){return(CMTFtoolbox::acmtfr_gradient(x,Z,Y,alpha,beta,epsilon,pi))})
+# # ACMTF_no_pi = CMTFtoolbox::mize_runner(init, fg, abs_tol=abs_tol, rel_tol=rel_tol)
+# ACMTF_no_pi = readRDS("./ACMTF_no_pi.RDS")
+# 
+# # Process result
+# 
+# ## High pi
+# pi = 0.9
+# f_per_block = apply(ACMTF_high_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[1]]})
+# f_per_block = t(f_per_block) %>% as_tibble()
+# 
+# f_y = apply(ACMTF_high_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[2]]})
+# f_y = f_y %>% as_tibble()
+# 
+# f_norm = apply(ACMTF_high_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[3]]})
+# f_norm = colSums(f_norm)
+# 
+# f_lambda = apply(ACMTF_high_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[4]]})
+# f_lambda = colSums(f_lambda)
+# 
+# df = cbind(f_per_block, f_y, f_norm, f_lambda)
+# colnames(df) = c("X1", "X2", "X3", "Y", "norm1", "lambda")
+# df = df %>% mutate(pi=pi, f = sum(X1, X2, X3, Y, norm1, lambda))
+# 
+# df_high = df
+# 
+# ## Medium
+# pi=0.5
+# f_per_block = apply(ACMTF_normal_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[1]]})
+# f_per_block = t(f_per_block) %>% as_tibble()
+# 
+# f_y = apply(ACMTF_normal_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[2]]})
+# f_y = f_y %>% as_tibble()
+# 
+# f_norm = apply(ACMTF_normal_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[3]]})
+# f_norm = colSums(f_norm)
+# 
+# f_lambda = apply(ACMTF_normal_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[4]]})
+# f_lambda = colSums(f_lambda)
+# 
+# df = cbind(f_per_block, f_y, f_norm, f_lambda)
+# colnames(df) = c("X1", "X2", "X3", "Y", "norm1", "lambda")
+# df = df %>% mutate(pi=pi, f = sum(X1, X2, X3, Y, norm1, lambda))
+# 
+# df_normal = df
+# 
+# ## Low
+# pi=0.1
+# f_per_block = apply(ACMTF_low_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[1]]})
+# f_per_block = t(f_per_block) %>% as_tibble()
+# 
+# f_y = apply(ACMTF_low_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[2]]})
+# f_y = f_y %>% as_tibble()
+# 
+# f_norm = apply(ACMTF_low_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[3]]})
+# f_norm = colSums(f_norm)
+# 
+# f_lambda = apply(ACMTF_low_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[4]]})
+# f_lambda = colSums(f_lambda)
+# 
+# df = cbind(f_per_block, f_y, f_norm, f_lambda)
+# colnames(df) = c("X1", "X2", "X3", "Y", "norm1", "lambda")
+# df = df %>% mutate(pi=pi, f = sum(X1, X2, X3, Y, norm1, lambda))
+# 
+# df_low = df
+# 
+# # No pi
+# pi=1
+# f_per_block = apply(ACMTF_no_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[1]]})
+# f_per_block = t(f_per_block) %>% as_tibble()
+# 
+# f_y = apply(ACMTF_no_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[2]]})
+# f_y = f_y %>% as_tibble()
+# 
+# f_norm = apply(ACMTF_no_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[3]]})
+# f_norm = colSums(f_norm)
+# 
+# f_lambda = apply(ACMTF_no_pi$all_iterations, 2, FUN=function(x){acmtfr_fun(x,Z,Y,alpha,beta,epsilon,pi,manual=TRUE)[[4]]})
+# f_lambda = colSums(f_lambda)
+# 
+# df = cbind(f_per_block, f_y, f_norm, f_lambda)
+# colnames(df) = c("X1", "X2", "X3", "Y", "norm1", "lambda")
+# df = df %>% mutate(pi=pi, f = sum(X1, X2, X3, Y, norm1, lambda))
+# 
+# df_no = df
+# 
+# # Plot
+# df_high = df_high %>% mutate(iteration = 1:nrow(.))
+# df_normal = df_normal %>% mutate(iteration = 1:nrow(.))
+# df_low = df_low %>% mutate(iteration = 1:nrow(.))
+# df_no = df_no %>% mutate(iteration = 1:nrow(.), Y = Y + 1e-10)
+# 
+# df = rbind(df_high, df_normal, df_low, df_no) %>% as_tibble()
+# a=df %>% select(-f) %>% pivot_longer(-c(iteration,pi)) %>% ggplot(aes(x=iteration,y=value,col=as.factor(name))) + facet_wrap(~pi, scales="free_x", nrow=1) + geom_line() + scale_y_log10()
+# 
+# # check lambdas
+# c=matrix(ACMTF_low_pi$par[1821:1841], nrow=3, ncol=7) %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Low pi") + theme(legend.position = "none")
+# 
+# d=matrix(ACMTF_normal_pi$par[1821:1841], nrow=3, ncol=7) %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Normal pi") + theme(legend.position = "none")
+# 
+# e=matrix(ACMTF_high_pi$par[1821:1841], nrow=3, ncol=7) %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("High pi") + theme(legend.position = "none")
+# 
+# f=matrix(ACMTF_no_pi$par[1821:1841], nrow=3, ncol=7) %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=1") + theme(legend.position = "none")
+# 
+# a
+# ggarrange(c,d,e,f, nrow=1)
+# 
+# df %>% select(lambda, beta, iteration) %>% ggplot(aes(x=iteration,y=lambda)) + facet_wrap(~beta, scales="free_x") + geom_line()
+# df %>% select(-f) %>% pivot_longer(-c(iteration,pi)) %>% ggplot(aes(x=iteration,y=value)) + facet_grid(vars(name),vars(pi), scales="free") + geom_line() + scale_y_log10()
+```
+
+```{r check if Y has been found}
+temp = do.call(rbind, lapply(models, FUN=function(x){max(abs(cor(x$Fac[[1]], as.matrix(Y_final@data))))}))
+temp %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% arrange(desc(V1))
+
+models[[153]]$Fac[[8]] %>% as_tibble() %>% mutate(index=1:nrow(.)) %>% pivot_longer(-index) %>% mutate(index = factor(index, levels=c(3,2,1))) %>% ggplot(aes(y=index,x=as.factor(name),fill=value)) + geom_tile(col="black") + ylab("X block") + scale_x_discrete(name="Component number", labels=1:7) + scale_fill_gradient2(low="red",high="green",mid="grey",midpoint=0) + geom_text(aes(label=round(value,2))) + scale_y_discrete(name="X block", labels=c("X3", "X2", "X1")) + ggtitle("Pi=1") + theme(legend.position="none")
+```
