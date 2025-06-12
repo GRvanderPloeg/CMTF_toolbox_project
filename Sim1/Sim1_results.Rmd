@@ -20,15 +20,15 @@ library(scales)
 ```
 
 ```{r model evaluation function}
-modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1),nrow=3,ncol=7)){
+modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,0.2,0,0.2,1,0,0,0,1,0,0,0,1),nrow=3,ncol=7)){
   
   # FMS
   FMS1 = calculateFMS(modelFac[[1]], realFac[[1]])
   FMS2 = calculateFMS(modelFac[[2]], realFac[[2]])
-  FMS3 = calculateFMS(modelFac[[3]], realFac[[5]])
-  FMS4 = calculateFMS(modelFac[[4]], realFac[[3]])
-  FMS5 = calculateFMS(modelFac[[5]], realFac[[6]])
-  FMS6 = calculateFMS(modelFac[[6]], realFac[[4]])
+  FMS3 = calculateFMS(modelFac[[3]], realFac[[3]])
+  FMS4 = calculateFMS(modelFac[[4]], realFac[[4]])
+  FMS5 = calculateFMS(modelFac[[5]], realFac[[5]])
+  FMS6 = calculateFMS(modelFac[[6]], realFac[[6]])
   FMS7 = calculateFMS(modelFac[[7]], realFac[[7]])
   
   # Repair the distinct components to appear in the correct column
@@ -53,16 +53,16 @@ modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1
   mappingMatrix = cbind(seq_along(mapping), mapping)
   
   mappingMatrix1 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,4,5),]
-  mappingMatrix2 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,4,6),]
-  mappingMatrix3 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,7),]
+  mappingMatrix2 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,3,6),]
+  mappingMatrix3 = mappingMatrix[mappingMatrix[,2] %in% c(1,2,4,7),]
 
   FMS1 = (sum(FMS1[mappingMatrix])) / 7
   FMS2 = (sum(FMS2[mappingMatrix1])) / 5
   FMS3 = (sum(FMS3[mappingMatrix1])) / 5
-  FMS4 = (sum(FMS4[mappingMatrix2])) / 5
-  FMS5 = (sum(FMS5[mappingMatrix2])) / 5
-  FMS6 = (sum(FMS6[mappingMatrix3])) / 3
-  FMS7 = (sum(FMS7[mappingMatrix3])) / 3
+  FMS4 = (sum(FMS4[mappingMatrix2])) / 4
+  FMS5 = (sum(FMS5[mappingMatrix2])) / 4
+  FMS6 = (sum(FMS6[mappingMatrix3])) / 4
+  FMS7 = (sum(FMS7[mappingMatrix3])) / 4
 
   FMS_overall = FMS1 * FMS2 * FMS3 * FMS4 * FMS5 * FMS6 * FMS7
   
@@ -119,7 +119,7 @@ calculateLSI = function(lambda_hat, lambda_true){
 set.seed(123)
 
 # Input loadings
-inputLoadings = readRDS("./Sim1_input_loadings.RDS")
+inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
 
 # Load data
 X1_final = readRDS("./Sim1_X1.RDS")
@@ -155,7 +155,7 @@ ACMTFR_models = c(acmtfr_models01, acmtfr_models02, acmtfr_models03,
                   acmtfr_models10)
 
 pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
-pis = rep(pis, each=100)
+pis = rep(pis, each=10)
 ```
 
 ```{r briefly check convergence reason}
@@ -170,20 +170,20 @@ cbind(what, pis) %>%
 ```
 
 ```{r varExp}
-lambda_true =matrix(c(1,1,1,1,1,1,1,1,0,0.05,0.05,0,1,0,0,0,1,0,0,0,1),nrow=3,ncol=7)
-fakeFac = list(inputLoadings[[1]], inputLoadings[[2]], inputLoadings[[5]], inputLoadings[[3]], inputLoadings[[6]], inputLoadings[[4]], inputLoadings[[7]], lambda_true)
-Xtrue = CMTFtoolbox::reinflateFac(fakeFac, Z)
+# lambda_true =matrix(c(1,1,1,1,1,1,1,1,0,0.05,0.05,0,1,0,0,0,1,0,0,0,1),nrow=3,ncol=7)
+# fakeFac = list(inputLoadings[[1]], inputLoadings[[2]], inputLoadings[[5]], inputLoadings[[3]], inputLoadings[[6]], inputLoadings[[4]], inputLoadings[[7]], lambda_true)
+# Xtrue = CMTFtoolbox::reinflateFac(fakeFac, Z)
+# 
+# findVarExpTrue = function(model){
+#   Xhats = CMTFtoolbox::reinflateFac(model$Fac, Z)
+#   result1 = multiway::sumsq(Xhats[[1]]) / multiway::sumsq(Xtrue[[1]]) * 100
+#   result2 =  multiway::sumsq(Xhats[[2]]) / multiway::sumsq(Xtrue[[2]]) * 100
+#   result3 = multiway::sumsq(Xhats[[3]]) / multiway::sumsq(Xtrue[[3]]) * 100
+#   result4 = multiway::sumsq(model$Yhat) / multiway::sumsq(Y_final) * 100
+#   return(c(result1, result2, result3, result4))
+# }
 
-findVarExpTrue = function(model){
-  Xhats = CMTFtoolbox::reinflateFac(model$Fac, Z)
-  result1 = multiway::sumsq(Xhats[[1]]) / multiway::sumsq(Xtrue[[1]]) * 100
-  result2 =  multiway::sumsq(Xhats[[2]]) / multiway::sumsq(Xtrue[[2]]) * 100
-  result3 = multiway::sumsq(Xhats[[3]]) / multiway::sumsq(Xtrue[[3]]) * 100
-  result4 = multiway::sumsq(model$Yhat) / multiway::sumsq(Y_final) * 100
-  return(c(result1, result2, result3, result4))
-}
-
-ACMTFR_varExps = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){findVarExpTrue(x)})) %>% as_tibble()
+ACMTFR_varExps = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){c(x$varExp, x$varExpY)})) %>% as_tibble()
 colnames(ACMTFR_varExps) = c("X1", "X2", "X3", "Y")
 ACMTFR_varExps = ACMTFR_varExps %>% mutate(pi = pis)
 
@@ -261,7 +261,7 @@ LSI_result %>% ggplot(aes(x=V1)) + facet_wrap(~pi) + geom_histogram() + xlab("La
 ```{r check which components are found - subject mode}
 # ACMTFR_models = readRDS("./acmtfr_model10.RDS")
 
-threshold = 0.75
+threshold = 0.85
 
 global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[1]], inputLoadings[[1]][,1])))}))
 global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[1]], inputLoadings[[1]][,2])))}))
@@ -309,13 +309,13 @@ A = df %>%
   mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[13]), expression(D[1]), expression(D[2]), expression(D[3]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
 
 # Plot with legend
-df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1", "distinct2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[13]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
 
 componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.factor(pis),y=value)) + facet_wrap(~name) + geom_boxplot()
 ```
@@ -363,7 +363,7 @@ B1 = df %>%
   mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[13]), expression(D[1]), expression(D[2]), expression(D[3]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
@@ -375,19 +375,18 @@ componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.facto
 ```
 
 ```{r check which components are found - feature mode - X2}
-global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[3]][,1])))}))
-global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[3]][,2])))}))
-local1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[3]][,3])))}))
-local2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[3]][,4])))}))
-distinct1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[3]][,6])))}))
+global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[4]][,1])))}))
+global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[4]][,2])))}))
+local1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[4]][,3])))}))
+distinct2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[4]], inputLoadings[[4]][,6])))}))
 
-componentShapes = cbind(global1, global2, local1, local2, distinct2, pis)
+componentShapes = cbind(global1, global2, local1, distinct2, pis)
 
 # NEW
 df = componentShapes %>%
     as_tibble() %>%
-    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, local1 = local1 >= threshold, local2 = local2 >= threshold, distinct2 = distinct2 >= threshold) %>%
-    select(global1,global2,local1,local2,distinct2,pis) %>%
+    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, local1 = local1 >= threshold, distinct2 = distinct2 >= threshold) %>%
+    select(global1,global2,local1,distinct2,pis) %>%
     pivot_longer(-pis) %>%
     group_by(pis, name) %>% 
     summarize(v = sum(value)) %>%
@@ -414,32 +413,33 @@ df[df$name=="distinct1", "X1"] = 1
 
 # Bar plot
 B2 = df %>%
-  mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct3"))) %>%
+  mutate(name = factor(name, levels=c("global1", "global2", "local1", "distinct2"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(D[2]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
 
 # Plot with legend
-df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "distinct2"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
 
 componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.factor(pis),y=value)) + facet_wrap(~name) + geom_boxplot()
 ```
 
 ```{r check which components are found - feature mode - X3}
-global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[4]][,1])))}))
-global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[4]][,2])))}))
-distinct3 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[4]][,7])))}))
+global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[6]][,1])))}))
+global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[6]][,2])))}))
+local2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[6]][,4])))}))
+distinct3 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[6]], inputLoadings[[6]][,7])))}))
 
-componentShapes = cbind(global1, global2, distinct3, pis)
+componentShapes = cbind(global1, global2, local2, distinct3, pis)
 
 # NEW
 df = componentShapes %>%
     as_tibble() %>%
-    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, distinct3 = distinct3 >= threshold) %>%
-    select(global1,global2,distinct3,pis) %>%
+    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, local2 = local2 >= threshold, distinct3 = distinct3 >= threshold) %>%
+    select(global1,global2,local2, distinct3,pis) %>%
     pivot_longer(-pis) %>%
     group_by(pis, name) %>% 
     summarize(v = sum(value)) %>%
@@ -466,26 +466,26 @@ df[df$name=="distinct1", "X1"] = 1
 
 # Bar plot
 B3 = df %>%
-  mutate(name = factor(name, levels=c("global1", "global2", "distinct3"))) %>%
+  mutate(name = factor(name, levels=c("global1", "global2", "local2", "distinct3"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(D[3]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[13]), expression(D[3]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
 
 # Plot with legend
-df %>% mutate(name = factor(name, levels=c("global1", "global2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
 
 componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.factor(pis),y=value)) + facet_wrap(~name) + geom_boxplot()
 ```
 
 ```{r check which components are found - time mode - X1}
-global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[5]][,1])))}))
-global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[5]][,2])))}))
-local1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[5]][,3])))}))
-local2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[5]][,4])))}))
-distinct1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[5]][,5])))}))
+global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[3]][,1])))}))
+global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[3]][,2])))}))
+local1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[3]][,3])))}))
+local2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[3]][,4])))}))
+distinct1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[3]], inputLoadings[[3]][,5])))}))
 
 componentShapes = cbind(global1, global2, local1, local2, distinct1, pis)
 
@@ -523,7 +523,7 @@ C1 = df %>%
   mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[13]), expression(D[1]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
@@ -535,19 +535,18 @@ componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.facto
 ```
 
 ```{r check which components are found - time mode - X2}
-global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[6]][,1])))}))
-global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[6]][,2])))}))
-local1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[6]][,3])))}))
-local2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[6]][,4])))}))
-distinct2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[6]][,6])))}))
+global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[5]][,1])))}))
+global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[5]][,2])))}))
+local1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[5]][,3])))}))
+distinct2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[5]], inputLoadings[[5]][,6])))}))
 
-componentShapes = cbind(global1, global2, local1, local2, distinct2, pis)
+componentShapes = cbind(global1, global2, local1, distinct2, pis)
 
 # NEW
 df = componentShapes %>%
     as_tibble() %>%
-    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, local1 = local1 >= threshold, local2 = local2 >= threshold, distinct2 = distinct2 >= threshold) %>%
-    select(global1,global2,local1,local2,distinct2,pis) %>%
+    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, local1 = local1 >= threshold, distinct2 = distinct2 >= threshold) %>%
+    select(global1,global2,local1,distinct2,pis) %>%
     pivot_longer(-pis) %>%
     group_by(pis, name) %>% 
     summarize(v = sum(value)) %>%
@@ -574,16 +573,16 @@ df[df$name=="distinct1", "X1"] = 1
 
 # Bar plot
 C2 = df %>%
-  mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct2"))) %>%
+  mutate(name = factor(name, levels=c("global1", "global2", "local1", "distinct2"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[2]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(D[2]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
 
 # Plot with legend
-df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct2"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "distinct2"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
 
 componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.factor(pis),y=value)) + facet_wrap(~name) + geom_boxplot()
 ```
@@ -591,15 +590,16 @@ componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.facto
 ```{r check which components are found - time mode - X3}
 global1 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[7]], inputLoadings[[7]][,1])))}))
 global2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[7]], inputLoadings[[7]][,2])))}))
+local2 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[7]], inputLoadings[[7]][,4])))}))
 distinct3 = unlist(lapply(ACMTFR_models, FUN=function(x){max(abs(multiway::congru(x$Fac[[7]], inputLoadings[[7]][,7])))}))
 
-componentShapes = cbind(global1, global2, distinct3, pis)
+componentShapes = cbind(global1, global2, local2, distinct3, pis)
 
 # NEW
 df = componentShapes %>%
     as_tibble() %>%
-    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, distinct3 = distinct3 >= threshold) %>%
-    select(global1,global2,distinct3,pis) %>%
+    mutate(global1 = global1 >= threshold, global2 = global2 >= threshold, local2 = local2 >= threshold, distinct3 = distinct3 >= threshold) %>%
+    select(global1,global2,local2,distinct3,pis) %>%
     pivot_longer(-pis) %>%
     group_by(pis, name) %>% 
     summarize(v = sum(value)) %>%
@@ -626,21 +626,21 @@ df[df$name=="distinct1", "X1"] = 1
 
 # Bar plot
 C3 = df %>%
-  mutate(name = factor(name, levels=c("global1", "global2", "distinct3"))) %>%
+  mutate(name = factor(name, levels=c("global1", "global2", "local2", "distinct3"))) %>%
   ggplot(aes(x=as.factor(name),y=v,fill=as.factor(pis))) +
   geom_bar(stat="identity",position=position_dodge(),col="black") +
-  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(D[3]))) +
+  scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[13]), expression(D[3]))) +
   xlab("") +
   ylab("Number of models") +
   theme(legend.position="none")
 
 # Plot with legend
-df %>% mutate(name = factor(name, levels=c("global1", "global2", "local1", "local2", "distinct1"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
+df %>% mutate(name = factor(name, levels=c("global1", "global2", "local2", "distinct3"))) %>% ggplot(aes(x=as.factor(name),fill=as.factor(pis))) + geom_bar(position=position_dodge(),col="black") + scale_x_discrete(labels=c(expression(C[123]), expression(C[123]), expression(L[12]), expression(L[12]), expression(D[1]), expression(D[2]), expression(D[3]))) + xlab("") + ylab("Number of models") + theme(legend.position="right") + guides(fill=guide_legend("Pi"))
 
 componentShapes %>% as_tibble() %>% pivot_longer(-pis) %>% ggplot(aes(x=as.factor(pis),y=value)) + facet_wrap(~name) + geom_boxplot()
 ```
 ```{r combine all plots}
-ggarrange(A, B1, C1, B2, C2)
+ggarrange(A, B1, C1, B2, C2, B3, C3)
 ```
 ```{r FMS for everything}
 models = result07

@@ -6,142 +6,55 @@ library(ggpubr)
 
 set.seed(123)
 
-# Sizes of the blocks
-numSubjects = 100
-numFeatures1 = 120
-numFeatures2 = 150
-numFeatures3 = 90
-numTimepoints = 5
-
 # Settings
-delta = 0.1
+delta = 0.03
 rho = 1
 noiseOnX = 0.33
 noiseOnY = 0.10
 
-# Simulation
+# Import loadings
+inputLoadings = readRDS("./Simulated_data/input_loadings.RDS")
 
-# initialize subject loadings
-r = array(rnorm(numSubjects*7), c(numSubjects, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
+# Sizes of the blocks
+numSubjects = nrow(inputLoadings[[1]])
+numFeatures1 = nrow(inputLoadings[[2]])
+numFeatures2 = nrow(inputLoadings[[4]])
+numFeatures3 = nrow(inputLoadings[[6]])
+numTimepoints = nrow(inputLoadings[[3]])
 
-a_global1 = U[,1]
-a_global2 = U[,2]
-a_local1 = U[,3]
-a_local2 = U[,4]
-a_distinct1 = U[,5]
-a_distinct2 = U[,6]
-a_distinct3 = U[,7]
-scores = U
-
-# initialize feature loadings 1
-r = array(rnorm(numFeatures1*7), c(numFeatures1, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
-
-b1_global1 = U[,1]
-b1_global2 = U[,2]
-b1_local1 = U[,3]
-b1_local2 = U[,4]
-b1_distinct1 = U[,5]
-b1_distinct2 = U[,6]
-b1_distinct3 = U[,7]
-
-loadings1 = U
-
-# initialize feature loadings 2
-r = array(rnorm(numFeatures2*7), c(numFeatures2, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
-
-b2_global1 = U[,1]
-b2_global2 = U[,2]
-b2_local1 = U[,3]
-b2_local2 = U[,4]
-b2_distinct1 = U[,5]
-b2_distinct2 = U[,6]
-b2_distinct3 = U[,7]
-
-loadings2 = U
-
-# initialize feature loadings 3
-r = array(rnorm(numFeatures3*7), c(numFeatures3, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
-
-b3_global1 = U[,1]
-b3_global2 = U[,2]
-b3_local1 = U[,3]
-b3_local2 = U[,4]
-b3_distinct1 = U[,5]
-b3_distinct2 = U[,6]
-b3_distinct3 = U[,7]
-
-loadings3 = U
-
-# initialize time loadings 1
-r = array(rnorm(numTimepoints*7), c(numTimepoints, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
-
-c1_global1 = U[,1]
-c1_global2 = U[,2]
-c1_local1 = U[,3]
-c1_local2 = U[,4]
-c1_distinct1 = U[,5]
-c1_distinct2 = U[,6]
-c1_distinct3 = U[,7]
-
-timeLoadings1 = U
-
-# initialize time loadings 2
-r = array(rnorm(numTimepoints*7), c(numTimepoints, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
-
-c2_global1 = U[,1]
-c2_global2 = U[,2]
-c2_local1 = U[,3]
-c2_local2 = U[,4]
-c2_distinct1 = U[,5]
-c2_distinct2 = U[,6]
-c2_distinct3 = U[,7]
-
-timeLoadings2 = U
-
-# initialize time loadings 3
-r = array(rnorm(numTimepoints*7), c(numTimepoints, 7))
-U = CMTFtoolbox::removeTwoNormCol(r)
-
-c3_global1 = U[,1]
-c3_global2 = U[,2]
-c3_local1 = U[,3]
-c3_local2 = U[,4]
-c3_distinct1 = U[,5]
-c3_distinct2 = U[,6]
-c3_distinct3 = U[,7]
-
-timeLoadings3 = U
+# Name matrices
+A = inputLoadings[[1]]
+B1 = inputLoadings[[2]]
+C1 = inputLoadings[[3]]
+B2 = inputLoadings[[4]]
+C2 = inputLoadings[[5]]
+B3 = inputLoadings[[6]]
+C3 = inputLoadings[[7]]
 
 # Block X1
-X1_term1 = parafac4microbiome::reinflateTensor(a_global1, b1_global1, c1_global1, returnAsTensor=TRUE)
-X1_term2 = parafac4microbiome::reinflateTensor(a_global2, b1_global2, c1_global2, returnAsTensor=TRUE)
-X1_term3 = parafac4microbiome::reinflateTensor(a_local1, b1_local1, c1_local1, returnAsTensor=TRUE)
-X1_term4 = parafac4microbiome::reinflateTensor(a_local2, b1_local2, c1_local2, returnAsTensor=TRUE)
-X1_term5 = parafac4microbiome::reinflateTensor(a_distinct1, b1_distinct1, c1_distinct1, returnAsTensor=TRUE)
+X1_term1 = parafac4microbiome::reinflateTensor(A[,1], B1[,1], C1[,1], returnAsTensor=TRUE)
+X1_term2 = parafac4microbiome::reinflateTensor(A[,2], B1[,2], C1[,2], returnAsTensor=TRUE)
+X1_term3 = parafac4microbiome::reinflateTensor(A[,3], B1[,3], C1[,3], returnAsTensor=TRUE)
+X1_term4 = parafac4microbiome::reinflateTensor(A[,4], B1[,4], C1[,4], returnAsTensor=TRUE)
+X1_term5 = parafac4microbiome::reinflateTensor(A[,5], B1[,5], C1[,5], returnAsTensor=TRUE)
 
 X1_raw = X1_term1 + X1_term2 + X1_term3 + delta * X1_term4 + X1_term5
 
 # Block X2
-X2_term1 = parafac4microbiome::reinflateTensor(a_global1, b2_global1, c2_global1, returnAsTensor=TRUE)
-X2_term2 = parafac4microbiome::reinflateTensor(a_global2, b2_global2, c2_global2, returnAsTensor=TRUE)
-X2_term3 = parafac4microbiome::reinflateTensor(a_local1, b2_local1, c2_local1, returnAsTensor=TRUE)
-X2_term4 = parafac4microbiome::reinflateTensor(a_local2, b2_local2, c2_local2, returnAsTensor=TRUE)
-X2_term5 = parafac4microbiome::reinflateTensor(a_distinct2, b2_distinct2, c2_distinct2, returnAsTensor=TRUE)
+X2_term1 = parafac4microbiome::reinflateTensor(A[,1], B2[,1], C2[,1], returnAsTensor=TRUE)
+X2_term2 = parafac4microbiome::reinflateTensor(A[,2], B2[,2], C2[,2], returnAsTensor=TRUE)
+X2_term3 = parafac4microbiome::reinflateTensor(A[,3], B2[,3], C2[,3], returnAsTensor=TRUE)
+X2_term4 = parafac4microbiome::reinflateTensor(A[,6], B2[,6], C2[,6], returnAsTensor=TRUE)
 
-X2_raw = X2_term1 + X2_term2 + X2_term3 + delta * X2_term4 + X2_term5
+X2_raw = X2_term1 + X2_term2 + X2_term3 + X2_term4
 
 # Block X3
-X3_term1 = parafac4microbiome::reinflateTensor(a_global1, b3_global1, c3_global1, returnAsTensor=TRUE)
-X3_term2 = parafac4microbiome::reinflateTensor(a_global2, b3_global2, c3_global2, returnAsTensor=TRUE)
-X3_term3 = parafac4microbiome::reinflateTensor(a_distinct3, b3_distinct3, c3_distinct3, returnAsTensor=TRUE)
+X3_term1 = parafac4microbiome::reinflateTensor(A[,1], B3[,1], C3[,1], returnAsTensor=TRUE)
+X3_term2 = parafac4microbiome::reinflateTensor(A[,2], B3[,2], C3[,2], returnAsTensor=TRUE)
+X3_term3 = parafac4microbiome::reinflateTensor(A[,4], B3[,4], C3[,4], returnAsTensor=TRUE)
+X3_term4 = parafac4microbiome::reinflateTensor(A[,7], B3[,7], C3[,7], returnAsTensor=TRUE)
 
-X3_raw = X3_term1 + X3_term2 + X3_term3
+X3_raw = X3_term1 + X3_term2 + delta * X3_term3 + X3_term4
 
 # Create noise
 noise1 = as.tensor(array(rnorm(numSubjects*numFeatures1*numTimepoints), c(numSubjects, numFeatures1, numTimepoints)))
@@ -159,7 +72,7 @@ X2_final = X2_raw + noise2_scaled
 X3_final = X3_raw + noise3_scaled
 
 # Generate Y
-Y = rho * as.matrix(a_local2)
+Y = rho * A[,4]
 noiseY = as.matrix(rnorm(numSubjects))
 noiseY = noiseY - mean(noiseY)
 noiseY_scaled = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
@@ -172,7 +85,3 @@ saveRDS(X1_final@data, "./Sim1/Sim1_X1.RDS")
 saveRDS(X2_final@data, "./Sim1/Sim1_X2.RDS")
 saveRDS(X3_final@data, "./Sim1/Sim1_X3.RDS")
 saveRDS(Y_final@data, "./Sim1/Sim1_Y.RDS")
-
-# Save loadings
-allLoadings = list(scores, loadings1, timeLoadings1, loadings2, timeLoadings2, loadings3, timeLoadings3)
-saveRDS(allLoadings, "./Sim1/Sim1_input_loadings.RDS")
