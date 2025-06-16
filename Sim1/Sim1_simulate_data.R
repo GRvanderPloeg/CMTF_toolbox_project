@@ -7,10 +7,9 @@ library(ggpubr)
 set.seed(123)
 
 # Settings
-delta = 0.03
-rho = 1
-noiseOnX = 0.33
-noiseOnY = 0.10
+delta = 0.05
+noiseOnX = 0.30
+noiseOnY = 0.05
 
 # Import loadings
 inputLoadings = readRDS("./Simulated_data/input_loadings.RDS")
@@ -36,7 +35,7 @@ X1_term1 = parafac4microbiome::reinflateTensor(A[,1], B1[,1], C1[,1], returnAsTe
 X1_term2 = parafac4microbiome::reinflateTensor(A[,2], B1[,2], C1[,2], returnAsTensor=TRUE)
 X1_term3 = parafac4microbiome::reinflateTensor(A[,3], B1[,3], C1[,3], returnAsTensor=TRUE)
 X1_term4 = parafac4microbiome::reinflateTensor(A[,4], B1[,4], C1[,4], returnAsTensor=TRUE)
-X1_term5 = parafac4microbiome::reinflateTensor(A[,5], B1[,5], C1[,5], returnAsTensor=TRUE)
+X1_term5 = parafac4microbiome::reinflateTensor(A[,6], B1[,6], C1[,6], returnAsTensor=TRUE)
 
 X1_raw = X1_term1 + X1_term2 + X1_term3 + delta * X1_term4 + X1_term5
 
@@ -44,17 +43,19 @@ X1_raw = X1_term1 + X1_term2 + X1_term3 + delta * X1_term4 + X1_term5
 X2_term1 = parafac4microbiome::reinflateTensor(A[,1], B2[,1], C2[,1], returnAsTensor=TRUE)
 X2_term2 = parafac4microbiome::reinflateTensor(A[,2], B2[,2], C2[,2], returnAsTensor=TRUE)
 X2_term3 = parafac4microbiome::reinflateTensor(A[,3], B2[,3], C2[,3], returnAsTensor=TRUE)
-X2_term4 = parafac4microbiome::reinflateTensor(A[,6], B2[,6], C2[,6], returnAsTensor=TRUE)
+X2_term4 = parafac4microbiome::reinflateTensor(A[,5], B2[,5], C2[,5], returnAsTensor=TRUE)
+X2_term5 = parafac4microbiome::reinflateTensor(A[,7], B2[,7], C2[,7], returnAsTensor=TRUE)
 
-X2_raw = X2_term1 + X2_term2 + X2_term3 + X2_term4
+X2_raw = X2_term1 + X2_term2 + X2_term3 + X2_term4 + X2_term5
 
 # Block X3
 X3_term1 = parafac4microbiome::reinflateTensor(A[,1], B3[,1], C3[,1], returnAsTensor=TRUE)
 X3_term2 = parafac4microbiome::reinflateTensor(A[,2], B3[,2], C3[,2], returnAsTensor=TRUE)
 X3_term3 = parafac4microbiome::reinflateTensor(A[,4], B3[,4], C3[,4], returnAsTensor=TRUE)
-X3_term4 = parafac4microbiome::reinflateTensor(A[,7], B3[,7], C3[,7], returnAsTensor=TRUE)
+X3_term4 = parafac4microbiome::reinflateTensor(A[,5], B3[,5], C3[,5], returnAsTensor=TRUE)
+X3_term5 = parafac4microbiome::reinflateTensor(A[,8], B3[,8], C3[,8], returnAsTensor=TRUE)
 
-X3_raw = X3_term1 + X3_term2 + delta * X3_term3 + X3_term4
+X3_raw = X3_term1 + X3_term2 + delta * X3_term3 + X3_term4 + X3_term5
 
 # Create noise
 noise1 = as.tensor(array(rnorm(numSubjects*numFeatures1*numTimepoints), c(numSubjects, numFeatures1, numTimepoints)))
@@ -72,7 +73,7 @@ X2_final = X2_raw + noise2_scaled
 X3_final = X3_raw + noise3_scaled
 
 # Generate Y
-Y = rho * A[,4]
+Y = A[,4]
 noiseY = as.matrix(rnorm(numSubjects))
 noiseY = noiseY - mean(noiseY)
 noiseY_scaled = (norm(Y, "2") / (1/noiseOnY)) * (noiseY / norm(noiseY, "2"))
