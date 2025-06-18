@@ -1,0 +1,396 @@
+---
+title: "Sim1_results"
+output: html_document
+date: "2025-06-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preamble
+
+```{r packages to include}
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(CMTFtoolbox)
+library(parafac4microbiome)
+library(scales)
+```
+
+```{r model evaluation function}
+modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,0.1,0,0.1,0,1,1,1,0,0,0,1,0,0,0,1),nrow=3,ncol=8)){
+  
+  # FMS
+  FMS1 = t(calculateFMS(modelFac[[1]], realFac[[1]]))
+  FMS2 = t(calculateFMS(modelFac[[2]], realFac[[2]]))
+  FMS3 = t(calculateFMS(modelFac[[3]], realFac[[3]]))
+  FMS4 = t(calculateFMS(modelFac[[4]], realFac[[4]]))
+  FMS5 = t(calculateFMS(modelFac[[5]], realFac[[5]]))
+  FMS6 = t(calculateFMS(modelFac[[6]], realFac[[6]]))
+  FMS7 = t(calculateFMS(modelFac[[7]], realFac[[7]]))
+  
+  # Repair the distinct components to appear in the correct column
+  # FMS2 = cbind(FMS2, matrix(rnorm(7*2), nrow=7, ncol=2))
+  # FMS3 = cbind(FMS3, matrix(rnorm(7*2), nrow=7, ncol=2))
+  # FMS4 = cbind(FMS4[,1:4], rnorm(7), FMS4[,5], rnorm(7))
+  # FMS5 = cbind(FMS5[,1:4], rnorm(7), FMS5[,5], rnorm(7))
+  # FMS6 = cbind(FMS6[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS6[,3])
+  # FMS7 = cbind(FMS7[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS7[,3])
+  
+  # LSI
+  lambda_hat = abs(lambda_hat)
+  LSI = calculateLSI(lambda_hat, lambda_true)
+  
+  # Combine similarity matrices equally
+  similarityMatrix = (FMS1 + LSI)/2
+  
+  # Find best combination
+  mapping = clue::solve_LSAP(similarityMatrix, maximum=TRUE)
+  
+  # Return metrics
+  mappingMatrix = cbind(seq_along(mapping), mapping)
+  
+  mappingMatrix1 = mappingMatrix[mappingMatrix[,1] %in% c(1,2,3,4,6),]
+  mappingMatrix2 = mappingMatrix[mappingMatrix[,1] %in% c(1,2,3,5,7),]
+  mappingMatrix3 = mappingMatrix[mappingMatrix[,1] %in% c(1,2,4,5,8),]
+
+  FMS1_result = (sum(FMS1[mappingMatrix])) / 8
+  FMS2_result = (sum(FMS2[mappingMatrix1])) / 5
+  FMS3_result = (sum(FMS3[mappingMatrix1])) / 5
+  FMS4_result = (sum(FMS4[mappingMatrix2])) / 5
+  FMS5_result = (sum(FMS5[mappingMatrix2])) / 5
+  FMS6_result = (sum(FMS6[mappingMatrix3])) / 5
+  FMS7_result = (sum(FMS7[mappingMatrix3])) / 5
+
+  FMS_overall = FMS1_result * FMS2_result * FMS3_result * FMS4_result * FMS5_result * FMS6_result * FMS7_result
+  FMS_C1 = FMS1[mappingMatrix][1] * FMS2[mappingMatrix1][1] * FMS3[mappingMatrix1][1] * FMS4[mappingMatrix2][1] * FMS5[mappingMatrix2][1] * FMS6[mappingMatrix3][1] * FMS7[mappingMatrix3][1]
+  FMS_C2 = FMS1[mappingMatrix][2] * FMS2[mappingMatrix1][2] * FMS3[mappingMatrix1][2] * FMS4[mappingMatrix2][2] * FMS5[mappingMatrix2][2] * FMS6[mappingMatrix3][2] * FMS7[mappingMatrix3][2]
+  FMS_C3 = FMS1[mappingMatrix][3] * FMS2[mappingMatrix1][3] * FMS3[mappingMatrix1][3] * FMS4[mappingMatrix2][3] * FMS5[mappingMatrix2][3]
+  FMS_C4 = FMS1[mappingMatrix][4] * FMS2[mappingMatrix1][4] * FMS3[mappingMatrix1][4] * FMS6[mappingMatrix3][3] * FMS7[mappingMatrix3][3]
+  FMS_C5 = FMS1[mappingMatrix][5] * FMS4[mappingMatrix2][4] * FMS5[mappingMatrix2][4] * FMS6[mappingMatrix3][4] * FMS7[mappingMatrix3][4]
+  FMS_C6 = FMS1[mappingMatrix][6] * FMS2[mappingMatrix1][5] * FMS3[mappingMatrix1][5]
+  FMS_C7 = FMS1[mappingMatrix][7] * FMS4[mappingMatrix2][5] * FMS5[mappingMatrix2][5]
+  FMS_C8 = FMS1[mappingMatrix][8] * FMS6[mappingMatrix3][5] * FMS7[mappingMatrix3][5]
+  
+  lambda_hat_perm = lambda_hat[,mapping]
+  SSR = sum((lambda_true - lambda_hat_perm)^2)
+  LSI = 1 / (1 + SSR)
+  
+  result = list("FMS"=FMS_overall,
+                "FMS1"=FMS1_result,
+                "FMS2"=FMS2_result,
+                "FMS3"=FMS3_result,
+                "FMS4"=FMS4_result,
+                "FMS5"=FMS5_result,
+                "FMS6"=FMS6_result,
+                "FMS7"=FMS7_result,
+                "FMS_C1"=FMS_C1,
+                "FMS_C2"=FMS_C2,
+                "FMS_C3"=FMS_C3,
+                "FMS_C4"=FMS_C4,
+                "FMS_C5"=FMS_C5,
+                "FMS_C6"=FMS_C6,
+                "FMS_C7"=FMS_C7,
+                "FMS_C8"=FMS_C8,
+                "LSI"=LSI)
+  return(result)
+}
+
+calculateFMS = function(modelFac, realFac){
+  
+  similarityMatrix = matrix(0, nrow = ncol(modelFac), ncol = ncol(realFac))
+  
+  for (k in 1:ncol(modelFac)) {
+    for (l in 1:ncol(realFac)) {
+      vect1 = as.matrix(modelFac[, k])
+      vect2 = as.matrix(realFac[, l])
+      
+      # Cosine similarity
+      similarityMatrix[k, l] = abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+
+calculateLSI = function(lambda_hat, lambda_true){
+
+  similarityMatrix = matrix(NA, nrow=8, ncol=8)
+  lambda_hat = sweep(lambda_hat, 1, norms, FUN="*") # correct for block scaling
+  
+  for(k in 1:8){
+    for(l in 1:8){
+      real = lambda_true[,k]
+      hat = lambda_hat[,l]
+      similarityMatrix[k,l] = 1 / (1 + sum((real - hat)^2))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+```
+
+```{r run analysis - heatmap}
+set.seed(123)
+
+# Settings
+deltas = c(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999)
+p = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+pis = rep(p, each=100)
+
+# Input loadings
+inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
+
+# Load data
+X1_final = readRDS("./Sim4_X1.RDS")
+X2_final = readRDS("./Sim4_X2.RDS")
+X3_final = readRDS("./Sim4_X3.RDS")
+
+FMS_overall = matrix(NA, nrow=length(deltas), ncol=10)
+FMS_L13 = matrix(NA, nrow=length(deltas), ncol=10)
+deltaTCC_A = matrix(NA, nrow=length(deltas), ncol=length(p))
+deltaTCC_B1 = matrix(NA, nrow=length(deltas), ncol=length(p))
+deltaTCC_C1 = matrix(NA, nrow=length(deltas), ncol=length(p))
+deltaTCC_B3 = matrix(NA, nrow=length(deltas), ncol=length(p))
+deltaTCC_C3 = matrix(NA, nrow=length(deltas), ncol=length(p))
+
+for(i in 1:length(deltas)){
+  
+  delta = deltas[i]
+  
+  # Load data
+  Y_final = as.matrix(readRDS(paste0("./Sim4_Y_", delta, ".RDS")))
+
+  # Process data
+  datasets = list(X1_final, X2_final, X3_final)
+  modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
+  Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
+  norms = Z$norms
+  
+  # Load models
+  acmtfr_models01 = readRDS(paste0("./Sim4_ACMTFR_model_01_", delta, ".RDS"))
+  acmtfr_models02 = readRDS(paste0("./Sim4_ACMTFR_model_02_", delta, ".RDS"))
+  acmtfr_models03 = readRDS(paste0("./Sim4_ACMTFR_model_03_", delta, ".RDS"))
+  acmtfr_models04 = readRDS(paste0("./Sim4_ACMTFR_model_04_", delta, ".RDS"))
+  acmtfr_models05 = readRDS(paste0("./Sim4_ACMTFR_model_05_", delta, ".RDS"))
+  acmtfr_models06 = readRDS(paste0("./Sim4_ACMTFR_model_06_", delta, ".RDS"))
+  acmtfr_models07 = readRDS(paste0("./Sim4_ACMTFR_model_07_", delta, ".RDS"))
+  acmtfr_models08 = readRDS(paste0("./Sim4_ACMTFR_model_08_", delta, ".RDS"))
+  acmtfr_models09 = readRDS(paste0("./Sim4_ACMTFR_model_09_", delta, ".RDS"))
+  acmtfr_models10 = readRDS(paste0("./Sim4_ACMTFR_model_10_", delta, ".RDS"))
+  
+  ACMTFR_models = c(acmtfr_models01, acmtfr_models02, acmtfr_models03,
+                  acmtfr_models04, acmtfr_models05, acmtfr_models06,
+                  acmtfr_models07, acmtfr_models08, acmtfr_models09, acmtfr_models10)
+
+  result = lapply(ACMTFR_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadings, x$Fac[[8]])})
+  
+  df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
+  colnames(df) = c(paste0("C", 1:8), "Overall")
+  
+  df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+  
+  FMS_overall[i,] = df %>%
+    group_by(pi) %>%
+    slice_min(loss, n=1, with_ties=FALSE) %>%
+    ungroup() %>%
+    select(pi, Overall, loss) %>%
+    mutate(Overall = Overall - Overall[pi==1]) %>%
+    select(Overall) %>%
+    pull()
+    
+  FMS_L13[i,] = df %>%
+    group_by(pi) %>%
+    slice_min(loss, n=1, with_ties=FALSE) %>%
+    ungroup() %>%
+    select(pi, C4, loss) %>%
+    mutate(C4 = C4 - C4[pi==1]) %>%
+    select(C4) %>%
+    pull()
+  
+  p = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+  losses = sapply(ACMTFR_models, FUN=function(x){x$f})
+  losses = losses %>% as_tibble() %>% mutate(pi = pis, index = 1:nrow(.))
+
+  for(j in 1:length(p)){
+    piValue = p[j]
+    idx = (losses %>% filter(pi==piValue) %>% arrange(value) %>% select(index) %>% pull())[1]
+    correlations = abs(multiway::congru(ACMTFR_models[[idx]]$Fac[[1]], inputLoadings[[1]][,4]))
+    idy = which(correlations == max(correlations))
+    
+    deltaTCC_A[i,j] = abs(cor(ACMTFR_models[[idx]]$Fac[[1]][,idy], inputLoadings[[1]][,4]))
+    deltaTCC_B1[i,j] = abs(cor(ACMTFR_models[[idx]]$Fac[[2]][,idy], inputLoadings[[2]][,4]))
+    deltaTCC_C1[i,j] = abs(cor(ACMTFR_models[[idx]]$Fac[[3]][,idy], inputLoadings[[3]][,4]))
+    deltaTCC_B3[i,j] = abs(cor(ACMTFR_models[[idx]]$Fac[[6]][,idy], inputLoadings[[6]][,4]))
+    deltaTCC_C3[i,j] = abs(cor(ACMTFR_models[[idx]]$Fac[[7]][,idy], inputLoadings[[7]][,4]))
+  }
+}
+```
+
+```{r heatmap plots}
+colnames(FMS_overall) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+a=FMS_overall %>%
+  as_tibble() %>%
+  mutate(delta=deltas) %>%
+  pivot_longer(-delta) %>% 
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(Delta*FMS[overall]),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+colnames(FMS_L13) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+b=FMS_L13 %>%
+  as_tibble() %>%
+  mutate(delta=deltas) %>%
+  pivot_longer(-delta) %>% 
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(Delta*FMS[13]),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+colnames(deltaTCC_A) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+c=deltaTCC_A %>%
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+colnames(deltaTCC_B1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+d=deltaTCC_B1 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+colnames(deltaTCC_C1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+e=deltaTCC_C1 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+colnames(deltaTCC_B3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+f=deltaTCC_B3 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+colnames(deltaTCC_C3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+g=deltaTCC_C3 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  xlab(expression(pi)) +
+  ylab(expression(eta[y]))
+
+ggarrange(a,b,c,d,e,f,g, nrow=4, ncol=2)
+```
+
+```{r run analysis - ecdf}
+set.seed(123)
+
+# Settings
+noises = c(0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999)
+pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+pis = rep(pis, each=100)
+
+# Input loadings
+inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
+
+# Load data
+X1_final = readRDS("./Sim4_X1.RDS")
+X2_final = readRDS("./Sim4_X2.RDS")
+X3_final = readRDS("./Sim4_X3.RDS")
+
+# Process data
+datasets = list(X1_final, X2_final, X3_final)
+modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
+Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
+norms = Z$norms
+
+FMSdelta = 1:length(noises)
+
+for(i in 1:length(noises)){
+  
+  noiseOnY = noises[i]
+  
+  # Load data
+  Y_final = as.matrix(readRDS(paste0("./Sim4_Y_", noiseOnY, ".RDS")))
+  
+  # Load models
+  acmtfr_models01 = readRDS(paste0("./Sim4_ACMTFR_model_01_", noiseOnY, ".RDS"))
+  acmtfr_models02 = readRDS(paste0("./Sim4_ACMTFR_model_02_", noiseOnY, ".RDS"))
+  acmtfr_models03 = readRDS(paste0("./Sim4_ACMTFR_model_03_", noiseOnY, ".RDS"))
+  acmtfr_models04 = readRDS(paste0("./Sim4_ACMTFR_model_04_", noiseOnY, ".RDS"))
+  acmtfr_models05 = readRDS(paste0("./Sim4_ACMTFR_model_05_", noiseOnY, ".RDS"))
+  acmtfr_models06 = readRDS(paste0("./Sim4_ACMTFR_model_06_", noiseOnY, ".RDS"))
+  acmtfr_models07 = readRDS(paste0("./Sim4_ACMTFR_model_07_", noiseOnY, ".RDS"))
+  acmtfr_models08 = readRDS(paste0("./Sim4_ACMTFR_model_08_", noiseOnY, ".RDS"))
+  acmtfr_models09 = readRDS(paste0("./Sim4_ACMTFR_model_09_", noiseOnY, ".RDS"))
+  acmtfr_models10 = readRDS(paste0("./Sim4_ACMTFR_model_10_", noiseOnY, ".RDS"))
+  
+  ACMTFR_models = c(acmtfr_models01, acmtfr_models02, acmtfr_models03,
+                  acmtfr_models04, acmtfr_models05, acmtfr_models06,
+                  acmtfr_models07, acmtfr_models08, acmtfr_models09, acmtfr_models10)
+
+  result = lapply(ACMTFR_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadings, x$Fac[[8]])})
+  
+  df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
+  colnames(df) = c(paste0("C", 1:8), "Overall")
+  
+  threshold = df %>% mutate(pi=pis) %>% filter(pi==1) %>% select(C4) %>% pull() %>% max()
+  FMSdelta[i] = (df %>% mutate(pi=pis) %>% filter(pi!=1) %>% select(C4) %>% pull() %>% max()) - threshold
+  
+  a = df %>% mutate(pi=pis) %>% pivot_longer(-pi) %>% filter(name=="C4") %>% ggplot(aes(x=value,col=as.factor(pi))) + stat_ecdf() + geom_vline(xintercept=threshold, col="red", linetype="dashed", size=1.5) + xlab("FMS of the hidden local component") + ylab("ECDF(FMS)") + labs(col=expression(pi)) + ggtitle(noiseOnY)
+  
+  b= df %>% mutate(C1 = C1 > threshold, C2 = C2 > threshold, C3 = C3 > threshold, C4 = C4 > threshold, C5 = C5 > threshold, C6 = C6 > threshold, C7 = C7 > threshold, C8 = C8 > threshold) %>% select(-Overall) %>% mutate(pi=pis) %>% pivot_longer(-pi) %>% filter(name=="C4") %>% ggplot(aes(x=as.factor(pi),fill=value)) + geom_bar(col="black") + xlab(expression(pi)) + ylab("Number of models") + scale_fill_manual(name="FMS improvement", labels=c("No", "Yes"), values=hue_pal()(2)) + ggtitle(noiseOnY)
+  
+  print(ggarrange(a,b,nrow=2,ncol=1))
+}
+```
+```{r FMS delta plot}
+cbind(noises, FMSdelta) %>% as_tibble() %>% ggplot(aes(x=noises,y=FMSdelta)) + geom_point()
+```
