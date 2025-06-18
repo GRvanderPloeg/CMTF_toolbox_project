@@ -11,12 +11,12 @@ set.seed(123)
 
 # Settings
 numComponents = 8
-cvFolds = 2
+cvFolds = 5
 nstart = 10
 normalize = TRUE
 normY = 1
 numCores = parallel::detectCores()
-pis = c(0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 
 # Load data
 X1_final = readRDS("./Sim1_X1.RDS")
@@ -86,17 +86,18 @@ for(pi in pis){
       # unfoldedXtest_scl = sweep(unfoldedXtest, 1, stds, FUN="/")
       # Xtest_cnt_scl = rTensor::k_fold(unfoldedXtest_scl, m=2, modes=Xtest@modes)
 
-      Xtrain_cnt_scl = Xtrain
-      Xtest_cnt_scl = Xtest
+      Xtrain_final = Xtrain
+      Xtest_final = Xtest
 
-      if(normalize){
-        norm = rTensor::fnorm(Xtrain_cnt_scl)
-        Xtrain_final[[p]] = Xtrain_cnt_scl@data / norm
-        Xtest_final[[p]] = Xtest_cnt_scl@data / norm
-      } else{
-        Xtrain_final[[p]] = Xtrain_cnt_scl@data
-        Xtest_final[[p]] = Xtest_cnt_scl@data
-      }
+    #   if(normalize){
+    #     norm = rTensor::fnorm(Xtrain_cnt_scl)
+    #     Xtrain_final[[p]] = Xtrain_cnt_scl@data / norm
+    #     Xtest_final[[p]] = Xtest_cnt_scl@data / norm
+    #   } else{
+    #     Xtrain_final[[p]] = Xtrain_cnt_scl@data
+    #     Xtest_final[[p]] = Xtest_cnt_scl@data
+    #   }
+    # }
     }
 
     Ztrain = setupCMTFdata(Xtrain_final, Z$modes, normalize=FALSE) # do not normalize again
