@@ -1,0 +1,374 @@
+---
+title: "Sim1_results"
+output: html_document
+date: "2025-06-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preamble
+
+```{r packages to include}
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(CMTFtoolbox)
+library(parafac4microbiome)
+library(scales)
+```
+
+```{r model evaluation function}
+modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,0.1,0,0.1,0,1,1,1,0,0,0,1,0,0,0,1),nrow=3,ncol=8)){
+  
+  # FMS
+  FMS1 = t(calculateFMS(modelFac[[1]], realFac[[1]]))
+  FMS2 = t(calculateFMS(modelFac[[2]], realFac[[2]]))
+  FMS3 = t(calculateFMS(modelFac[[3]], realFac[[3]]))
+  FMS4 = t(calculateFMS(modelFac[[4]], realFac[[4]]))
+  FMS5 = t(calculateFMS(modelFac[[5]], realFac[[5]]))
+  FMS6 = t(calculateFMS(modelFac[[6]], realFac[[6]]))
+  FMS7 = t(calculateFMS(modelFac[[7]], realFac[[7]]))
+  
+  # Repair the distinct components to appear in the correct column
+  # FMS2 = cbind(FMS2, matrix(rnorm(7*2), nrow=7, ncol=2))
+  # FMS3 = cbind(FMS3, matrix(rnorm(7*2), nrow=7, ncol=2))
+  # FMS4 = cbind(FMS4[,1:4], rnorm(7), FMS4[,5], rnorm(7))
+  # FMS5 = cbind(FMS5[,1:4], rnorm(7), FMS5[,5], rnorm(7))
+  # FMS6 = cbind(FMS6[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS6[,3])
+  # FMS7 = cbind(FMS7[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS7[,3])
+  
+  # LSI
+  lambda_hat = abs(lambda_hat)
+  LSI = calculateLSI(lambda_hat, lambda_true)
+  
+  # Combine similarity matrices equally
+  similarityMatrix = (FMS1 + LSI)/2
+  
+  # Find best combination
+  mapping = clue::solve_LSAP(similarityMatrix, maximum=TRUE)
+  
+  # Return metrics
+  mappingMatrix = cbind(seq_along(mapping), mapping)
+  
+  mappingMatrix1 = mappingMatrix[mappingMatrix[,1] %in% c(1,2,3,4,6),]
+  mappingMatrix2 = mappingMatrix[mappingMatrix[,1] %in% c(1,2,3,5,7),]
+  mappingMatrix3 = mappingMatrix[mappingMatrix[,1] %in% c(1,2,4,5,8),]
+
+  FMS1_result = (sum(FMS1[mappingMatrix])) / 8
+  FMS2_result = (sum(FMS2[mappingMatrix1])) / 5
+  FMS3_result = (sum(FMS3[mappingMatrix1])) / 5
+  FMS4_result = (sum(FMS4[mappingMatrix2])) / 5
+  FMS5_result = (sum(FMS5[mappingMatrix2])) / 5
+  FMS6_result = (sum(FMS6[mappingMatrix3])) / 5
+  FMS7_result = (sum(FMS7[mappingMatrix3])) / 5
+
+  FMS_overall = FMS1_result * FMS2_result * FMS3_result * FMS4_result * FMS5_result * FMS6_result * FMS7_result
+  FMS_C1 = FMS1[mappingMatrix][1] * FMS2[mappingMatrix1][1] * FMS3[mappingMatrix1][1] * FMS4[mappingMatrix2][1] * FMS5[mappingMatrix2][1] * FMS6[mappingMatrix3][1] * FMS7[mappingMatrix3][1]
+  FMS_C2 = FMS1[mappingMatrix][2] * FMS2[mappingMatrix1][2] * FMS3[mappingMatrix1][2] * FMS4[mappingMatrix2][2] * FMS5[mappingMatrix2][2] * FMS6[mappingMatrix3][2] * FMS7[mappingMatrix3][2]
+  FMS_C3 = FMS1[mappingMatrix][3] * FMS2[mappingMatrix1][3] * FMS3[mappingMatrix1][3] * FMS4[mappingMatrix2][3] * FMS5[mappingMatrix2][3]
+  FMS_C4 = FMS1[mappingMatrix][4] * FMS2[mappingMatrix1][4] * FMS3[mappingMatrix1][4] * FMS6[mappingMatrix3][3] * FMS7[mappingMatrix3][3]
+  FMS_C5 = FMS1[mappingMatrix][5] * FMS4[mappingMatrix2][4] * FMS5[mappingMatrix2][4] * FMS6[mappingMatrix3][4] * FMS7[mappingMatrix3][4]
+  FMS_C6 = FMS1[mappingMatrix][6] * FMS2[mappingMatrix1][5] * FMS3[mappingMatrix1][5]
+  FMS_C7 = FMS1[mappingMatrix][7] * FMS4[mappingMatrix2][5] * FMS5[mappingMatrix2][5]
+  FMS_C8 = FMS1[mappingMatrix][8] * FMS6[mappingMatrix3][5] * FMS7[mappingMatrix3][5]
+  
+  lambda_hat_perm = lambda_hat[,mapping]
+  SSR = sum((lambda_true - lambda_hat_perm)^2)
+  LSI = 1 / (1 + SSR)
+  
+  result = list("FMS"=FMS_overall,
+                "FMS1"=FMS1_result,
+                "FMS2"=FMS2_result,
+                "FMS3"=FMS3_result,
+                "FMS4"=FMS4_result,
+                "FMS5"=FMS5_result,
+                "FMS6"=FMS6_result,
+                "FMS7"=FMS7_result,
+                "FMS_C1"=FMS_C1,
+                "FMS_C2"=FMS_C2,
+                "FMS_C3"=FMS_C3,
+                "FMS_C4"=FMS_C4,
+                "FMS_C5"=FMS_C5,
+                "FMS_C6"=FMS_C6,
+                "FMS_C7"=FMS_C7,
+                "FMS_C8"=FMS_C8,
+                "LSI"=LSI)
+  return(result)
+}
+
+calculateFMS = function(modelFac, realFac){
+  
+  similarityMatrix = matrix(0, nrow = ncol(modelFac), ncol = ncol(realFac))
+  
+  for (k in 1:ncol(modelFac)) {
+    for (l in 1:ncol(realFac)) {
+      vect1 = as.matrix(modelFac[, k])
+      vect2 = as.matrix(realFac[, l])
+      
+      # Cosine similarity
+      similarityMatrix[k, l] = abs(t(vect1) %*% vect2) / (norm(vect1, "F") * norm(vect2, "F"))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+
+calculateLSI = function(lambda_hat, lambda_true){
+
+  similarityMatrix = matrix(NA, nrow=8, ncol=8)
+  lambda_hat = sweep(lambda_hat, 1, norms, FUN="*") # correct for block scaling
+  
+  for(k in 1:8){
+    for(l in 1:8){
+      real = lambda_true[,k]
+      hat = lambda_hat[,l]
+      similarityMatrix[k,l] = 1 / (1 + sum((real - hat)^2))
+    }
+  }
+  
+  return(similarityMatrix)
+}
+```
+
+```{r load data}
+set.seed(123)
+
+# Input loadings
+inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
+
+# Delta
+delta = 0.03
+
+# Load data
+X1_final = readRDS(paste0("../Sim2/Sim2_X1_", delta, ".RDS"))
+X2_final = readRDS(paste0("../Sim2/Sim2_X2_", delta, ".RDS"))
+X3_final = readRDS(paste0("../Sim2/Sim2_X3_", delta, ".RDS"))
+Y_final = as.matrix(readRDS("../Sim2/Sim2_Y.RDS"))
+
+# Process data
+datasets = list(X1_final, X2_final, X3_final)
+modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
+Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
+
+norms = Z$norms
+# sweep(model$Fac[[8]], 1, Xnorms, FUN="*")
+```
+
+```{r run model if needed}
+# model = acmtfr_opt(Z, Y_final, 7, nstart=10, numCores=10)
+```
+
+```{r cp check for CV}
+# datasets1=lapply(datasets, FUN=function(x){x[1:50,,]})
+# Z1 = CMTFtoolbox::setupCMTFdata(datasets1, modes, normalize=TRUE)
+# # model = parafac4microbiome::parafac(Z1$object[[1]], 5, nstart=100)
+# model = acmtfr_opt(Z1, Y_final[1:50], 7, nstart=10, pi=0.9, numCores=10)
+```
+
+# Modeling results
+
+```{r load all models}
+acmtfr_models01 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_01_", delta, ".RDS"))
+acmtfr_models02 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_02_", delta, ".RDS"))
+acmtfr_models03 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_03_", delta, ".RDS"))
+acmtfr_models04 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_04_", delta, ".RDS"))
+acmtfr_models05 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_05_", delta, ".RDS"))
+acmtfr_models06 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_06_", delta, ".RDS"))
+acmtfr_models07 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_07_", delta, ".RDS"))
+acmtfr_models08 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_08_", delta, ".RDS"))
+acmtfr_models09 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_09_", delta, ".RDS"))
+acmtfr_models10 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_10_", delta, ".RDS"))
+```
+
+```{r combine them all together}
+ACMTFR_models = c(acmtfr_models01, acmtfr_models02, acmtfr_models03,
+                  acmtfr_models04, acmtfr_models05, acmtfr_models06,
+                  acmtfr_models07, acmtfr_models08, acmtfr_models09, acmtfr_models10)
+
+pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+pis = rep(pis, each=100)
+```
+
+```{r calculate model metrics}
+result = lapply(ACMTFR_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadings, x$Fac[[8]])})
+```
+
+```{r check RMSECV}
+# p = c(0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+# RMSE = matrix(NA, nrow=length(p), ncol=10)
+# 
+# for(i in 1:length(p)){
+#   pi = p[i]
+#   CV = readRDS(paste0("./ACMTFR_CV_pi_", pi, ".RDS"))
+#   RMSE[i,] = apply(CV, 2, FUN=function(x){sqrt(sum((x - Y_final)^2)/100)})
+# }
+# 
+# colnames(RMSE) = paste0("model", 1:10)
+# 
+# RMSE %>%
+#   as_tibble() %>%
+#   mutate(pi=p) %>%
+#   pivot_longer(-pi) %>%
+#   ggplot(aes(x=as.factor(pi),y=value)) +
+#   geom_violin(scale="width") +
+#   geom_jitter(width=0.05, size=0.5) +
+#   # stat_summary(fun = median, geom = "point", color = "red", size = 2) +
+#   xlab(expression(pi)) +
+#   ylab("RMSECV")
+# ```
+# ```{r pi versus FMS of C4}
+# df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
+# colnames(df) = c(paste0("C", 1:8), "Overall")
+# 
+# df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+# 
+# max_pts <- df %>% 
+#     group_by(pi) %>%                 # handle each π separately
+#     slice_min(loss, n = 1, with_ties = FALSE) %>%  # row with lowest loss
+#     ungroup() %>% 
+#     select(pi, C4, loss)        # keep what you need
+# 
+# ggplot(df, aes(x = factor(pi), y = C4)) +
+#     geom_violin(scale = "width") +
+#     geom_jitter(width = 0.05, size = 0.5) +
+#     geom_point(data = max_pts, colour = "red", size = 2) + 
+#     ylim(0, 1) +
+#     labs(x = expression(pi), y = expression(FMS[L13]))
+```
+
+```{r pi versus FMS of everything}
+df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
+colnames(df) = c(paste0("C", 1:8), "Overall")
+
+df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+
+max_pts <- df %>% 
+    group_by(pi) %>%                 # handle each π separately
+    slice_min(loss, n = 1, with_ties = FALSE) %>%  # row with lowest loss
+    ungroup() %>% 
+    select(pi, Overall, loss)        # keep what you need
+
+FMS_overall = ggplot(df, aes(x = factor(pi), y = Overall)) +
+    geom_violin(scale = "width") +
+    geom_jitter(width = 0.05, size = 0.5) +
+    geom_point(data = max_pts, colour = "red", size = 2) + 
+    ylim(0, 1) +
+    labs(x = expression(pi), y = expression(FMS[overall]))
+```
+```{r pi versus FMS of C4}
+df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
+colnames(df) = c(paste0("C", 1:8), "Overall")
+
+df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+
+max_pts <- df %>% 
+    group_by(pi) %>%                 # handle each π separately
+    slice_min(loss, n = 1, with_ties = FALSE) %>%  # row with lowest loss
+    ungroup() %>% 
+    select(pi, C4, loss)        # keep what you need
+
+FMS_C4 = ggplot(df, aes(x = factor(pi), y = C4)) +
+    geom_violin(scale = "width") +
+    geom_jitter(width = 0.05, size = 0.5) +
+    geom_point(data = max_pts, colour = "red", size = 2) + 
+    ylim(0, 1) +
+    labs(x = expression(pi), y = expression(FMS[L13]))
+```
+
+```{r show performance as a bar plot - based on lowest loss}
+p = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+losses = sapply(ACMTFR_models, FUN=function(x){x$f})
+losses = losses %>% as_tibble() %>% mutate(pi = pis, index = 1:nrow(.))
+
+df = matrix(NA, nrow=5, ncol=10)
+
+for(i in 1:length(p)){
+  piValue = p[i]
+  idx = (losses %>% filter(pi==piValue) %>% arrange(value) %>% select(index) %>% pull())[1]
+  correlations = abs(multiway::congru(ACMTFR_models[[idx]]$Fac[[1]], inputLoadings[[1]][,4]))
+  idy = which(correlations == max(correlations))
+  
+  modes = c(1,2,3,6,7)
+  for(j in 1:length(modes)){
+    mode = modes[j]
+    df[j,i] = abs(cor(ACMTFR_models[[idx]]$Fac[[mode]][,idy], inputLoadings[[mode]][,4]))
+  }
+}
+
+colnames(df) = p
+plottableData = df %>% 
+  as_tibble() %>% 
+  mutate(mode=c("A", "B1", "C1", "B3", "C3")) %>%
+  pivot_longer(-mode)
+
+A = plottableData %>%
+    filter(mode == "A") %>%
+    mutate(highlight = name == 1.0) %>%          # flag the π = 1 column
+    ggplot(aes(x = as.factor(name), y = value, fill = highlight)) +
+    geom_col(colour = "black") +                 # black outline
+    scale_fill_manual(values = c(`TRUE` = "orange",
+                                 `FALSE` = "#474F58"),
+                      guide  = "none") +         # no legend needed
+    ylim(0,1) +
+    xlab(expression(pi)) +
+    ylab(expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")))
+
+B1 = plottableData %>%
+    filter(mode == "B1") %>%
+    mutate(highlight = name == 1.0) %>%          # flag the π = 1 column
+    ggplot(aes(x = as.factor(name), y = value, fill = highlight)) +
+    geom_col(colour = "black") +                 # black outline
+    scale_fill_manual(values = c(`TRUE` = "orange",
+                                 `FALSE` = "#474F58"),
+                      guide  = "none") +         # no legend needed
+    ylim(0,1) +
+    xlab(expression(pi)) +
+    ylab(expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")))
+
+C1 = plottableData %>%
+    filter(mode == "C1") %>%
+    mutate(highlight = name == 1.0) %>%          # flag the π = 1 column
+    ggplot(aes(x = as.factor(name), y = value, fill = highlight)) +
+    geom_col(colour = "black") +                 # black outline
+    ylim(0,1) +
+    scale_fill_manual(values = c(`TRUE` = "orange",
+                                 `FALSE` = "#474F58"),
+                      guide  = "none") +         # no legend needed
+    xlab(expression(pi)) +
+    ylab(expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")))
+
+B3 = plottableData %>%
+    filter(mode == "B3") %>%
+    mutate(highlight = name == 1.0) %>%          # flag the π = 1 column
+    ggplot(aes(x = as.factor(name), y = value, fill = highlight)) +
+    geom_col(colour = "black") +                 # black outline
+    ylim(0,1) +
+    scale_fill_manual(values = c(`TRUE` = "orange",
+                                 `FALSE` = "#474F58"),
+                      guide  = "none") +         # no legend needed
+    xlab(expression(pi)) +
+    ylab(expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")))
+
+C3 = plottableData %>%
+    filter(mode == "C3") %>%
+    mutate(highlight = name == 1.0) %>%          # flag the π = 1 column
+    ggplot(aes(x = as.factor(name), y = value, fill = highlight)) +
+    geom_col(colour = "black") +                 # black outline
+    ylim(0,1) +
+    scale_fill_manual(values = c(`TRUE` = "orange",
+                                 `FALSE` = "#474F58"),
+                      guide  = "none") +         # no legend needed
+    xlab(expression(pi)) +
+    ylab(expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")))
+
+A
+B1
+C1 
+B3
+C3
+```
+```{r everything}
+ggarrange(FMS_overall, FMS_C4, A, B1, C1, B3, C3, nrow=4, ncol=2)
+```
