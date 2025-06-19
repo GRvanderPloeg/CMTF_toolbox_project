@@ -20,7 +20,7 @@ library(scales)
 ```
 
 ```{r model evaluation function}
-modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,0.1,0,0.1,0,1,1,1,0,0,0,1,0,0,0,1),nrow=3,ncol=8)){
+modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1,1,1,1,1,1,1,1,0,0.03,0,0.03,0,1,1,1,0,0,0,1,0,0,0,1),nrow=3,ncol=8)){
   
   # FMS
   FMS1 = t(calculateFMS(modelFac[[1]], realFac[[1]]))
@@ -40,6 +40,7 @@ modelEvaluation = function(modelFac, realFac, lambda_hat, lambda_true=matrix(c(1
   # FMS7 = cbind(FMS7[,1:2], matrix(rnorm(7*4), nrow=7, ncol=4), FMS7[,3])
   
   # LSI
+  lambda_hat = sweep(lambda_hat, 1, norms, FUN="*")
   lambda_hat = abs(lambda_hat)
   LSI = calculateLSI(lambda_hat, lambda_true)
   
@@ -191,8 +192,39 @@ pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 pis = rep(pis, each=100)
 ```
 
+```{r briefly check convergence reason}
+what = do.call(rbind, lapply(ACMTFR_models, FUN=function(x){x$terminate$what}))
+
+cbind(what, pis) %>%
+  as_tibble() %>%
+  ggplot(aes(x=as.factor(pis),fill=as.factor(V1))) +
+  geom_bar(col="black") +
+  xlab(expression(pi)) +
+  ylab("Number of models")
+```
+
 ```{r calculate model metrics}
 result = lapply(ACMTFR_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadings, x$Fac[[8]])})
+```
+
+```{r LSI}
+LSI_result = do.call(rbind, lapply(result, FUN=function(x){x$LSI}))
+
+LSI_result = LSI_result %>%
+  as_tibble() %>%
+  mutate(pi = pis, index = 1:length(pi))
+
+LSI_result %>%
+  ggplot(aes(x = as.factor(pi), y = V1)) +
+  geom_violin(scale="width") +
+  geom_jitter(width=0.1, size=0.75) +
+  stat_summary(fun = median, geom = "point", color = "red", size = 2) +
+  xlab(expression(pi)) +
+  ylab("Lambda Similarity Index") +
+  ylim(0,1) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+LSI_result %>% ggplot(aes(x=V1)) + facet_wrap(~pi) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
 ```
 
 ```{r check RMSECV}
@@ -369,6 +401,36 @@ C1
 B3
 C3
 ```
+
+```{r check rhos}
+p = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+losses = sapply(ACMTFR_models, FUN=function(x){x$f})
+losses = losses %>% as_tibble() %>% mutate(pi = pis, index = 1:nrow(.))
+
+rhos = rep(NA, length(p))
+
+for(i in 1:length(p)){
+  piValue = p[i]
+  idx = (losses %>% filter(pi==piValue) %>% arrange(value) %>% select(index) %>% pull())[1]
+  correlations = abs(multiway::congru(ACMTFR_models[[idx]]$Fac[[1]], inputLoadings[[1]][,4]))
+  idy = which(correlations == max(correlations))
+  
+  rhos[i] = abs(ACMTFR_models[[idx]]$rho[idy])
+}
+
+plottableData = rhos %>% as_tibble() %>% mutate(pi=p)
+
+R = plottableData %>%
+    mutate(highlight = pi == 1.0) %>%          # flag the π = 1 column
+    ggplot(aes(x = as.factor(pi), y = value, fill = highlight)) +
+    geom_col(colour = "black") +                 # black outline
+    scale_fill_manual(values = c(`TRUE` = "orange",
+                                 `FALSE` = "#474F58"),
+                      guide  = "none") +         # no legend needed
+    xlab(expression(pi)) +
+    ylab(expression(rho[L13]))
+```
+
 ```{r everything}
-ggarrange(FMS_overall, FMS_C4, A, B1, C1, B3, C3, nrow=4, ncol=2)
+ggarrange(FMS_overall, FMS_C4, A, B1, C1, B3, C3, R, nrow=4, ncol=2)
 ```

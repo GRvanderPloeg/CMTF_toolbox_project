@@ -231,26 +231,48 @@ for(i in 1:length(deltas)){
 
 ```{r heatmap plots}
 colnames(FMS_overall) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
-a=FMS_overall %>%
-  as_tibble() %>%
-  mutate(delta=deltas) %>%
-  pivot_longer(-delta) %>% 
-  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
-  geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(Delta*FMS[overall]),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
-  xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+a = FMS_overall %>%
+    as_tibble() %>%
+    mutate(delta = deltas) %>%
+    pivot_longer(-delta) %>%
+    ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
+    geom_tile(col = "black") +
+    scale_fill_gradient2(
+        name = expression(Delta*FMS[overall]),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )
+    ) +
+    xlab(expression(pi)) +
+    ylab(expression(eta[x])) +
+    theme(legend.direction = "vertical",legend.position = "right")
+
 
 colnames(FMS_L13) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
-b=FMS_L13 %>%
-  as_tibble() %>%
-  mutate(delta=deltas) %>%
-  pivot_longer(-delta) %>% 
-  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
-  geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(Delta*FMS[13]),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
-  xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+b = FMS_L13 %>%
+    as_tibble() %>%
+    mutate(delta = deltas) %>%
+    pivot_longer(-delta) %>%
+    ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
+    geom_tile(col = "black") +
+    scale_fill_gradient2(
+        name = expression(Delta*FMS[13]),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+    xlab(expression(pi)) +
+    ylab(expression(eta[x])) +
+    theme(legend.direction = "vertical",legend.position = "right")
 
 colnames(deltaTCC_A) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 c=deltaTCC_A %>%
@@ -263,9 +285,19 @@ c=deltaTCC_A %>%
   mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  scale_fill_gradient2(
+        name=expression(paste(Delta,"|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
   xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+  ylab(expression(eta[x])) +
+  theme(legend.direction = "vertical",legend.position = "right")
 
 colnames(deltaTCC_B1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 d=deltaTCC_B1 %>%
@@ -278,9 +310,19 @@ d=deltaTCC_B1 %>%
   mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  scale_fill_gradient2(
+        name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
   xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+  ylab(expression(eta[x])) +
+  theme(legend.direction = "vertical",legend.position = "right")
 
 colnames(deltaTCC_C1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 e=deltaTCC_C1 %>%
@@ -293,9 +335,19 @@ e=deltaTCC_C1 %>%
   mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  scale_fill_gradient2(
+        name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
   xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+  ylab(expression(eta[x])) +
+  theme(legend.direction = "vertical",legend.position = "right")
 
 colnames(deltaTCC_B3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 f=deltaTCC_B3 %>%
@@ -308,9 +360,19 @@ f=deltaTCC_B3 %>%
   mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  scale_fill_gradient2(
+        name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
   xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+  ylab(expression(eta[x])) +
+  theme(legend.direction = "vertical",legend.position = "right")
 
 colnames(deltaTCC_C3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 g=deltaTCC_C3 %>%
@@ -323,75 +385,19 @@ g=deltaTCC_C3 %>%
   mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
-  scale_fill_gradient2(name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),low = "red", high="green", midpoint = 0, limits=c(-1,1)) +
+  scale_fill_gradient2(
+        name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0,
+        limits = c(-1, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
   xlab(expression(pi)) +
-  ylab(expression(eta[x]))
+  ylab(expression(eta[x])) +
+  theme(legend.direction = "vertical",legend.position = "right")
 
-ggarrange(a,b,c,d,e,f,g, nrow=4, ncol=2)
-```
-
-```{r run analysis - ecdf}
-set.seed(123)
-
-# Settings
-noises = c(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)#, 0.8, 0.9, 0.99, 0.999)
-pis = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
-pis = rep(pis, each=100)
-
-# Input loadings
-inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
-
-# Load data
-Y_final = as.matrix(readRDS("./Sim3_Y.RDS"))
-
-FMSdelta = 1:length(noises)
-
-for(i in 1:length(noises)){
-  
-  noiseOnX = noises[i]
-  
-  # Load data
-  X1_final = readRDS(paste0("./Sim3_X1_", noiseOnX, ".RDS"))
-  X2_final = readRDS(paste0("./Sim3_X2_", noiseOnX, ".RDS"))
-  X3_final = readRDS(paste0("./Sim3_X3_", noiseOnX, ".RDS"))
-
-  # Process data
-  datasets = list(X1_final, X2_final, X3_final)
-  modes = list(c(1,2,3), c(1,4,5), c(1,6,7))
-  Z = CMTFtoolbox::setupCMTFdata(datasets, modes, normalize=TRUE)
-  norms = Z$norms
-  
-  # Load models
-  acmtfr_models01 = readRDS(paste0("./Sim3_ACMTFR_model_01_", noiseOnX, ".RDS"))
-  acmtfr_models02 = readRDS(paste0("./Sim3_ACMTFR_model_02_", noiseOnX, ".RDS"))
-  acmtfr_models03 = readRDS(paste0("./Sim3_ACMTFR_model_03_", noiseOnX, ".RDS"))
-  acmtfr_models04 = readRDS(paste0("./Sim3_ACMTFR_model_04_", noiseOnX, ".RDS"))
-  acmtfr_models05 = readRDS(paste0("./Sim3_ACMTFR_model_05_", noiseOnX, ".RDS"))
-  acmtfr_models06 = readRDS(paste0("./Sim3_ACMTFR_model_06_", noiseOnX, ".RDS"))
-  acmtfr_models07 = readRDS(paste0("./Sim3_ACMTFR_model_07_", noiseOnX, ".RDS"))
-  acmtfr_models08 = readRDS(paste0("./Sim3_ACMTFR_model_08_", noiseOnX, ".RDS"))
-  acmtfr_models09 = readRDS(paste0("./Sim3_ACMTFR_model_09_", noiseOnX, ".RDS"))
-  acmtfr_models10 = readRDS(paste0("./Sim3_ACMTFR_model_10_", noiseOnX, ".RDS"))
-  
-  ACMTFR_models = c(acmtfr_models01, acmtfr_models02, acmtfr_models03,
-                  acmtfr_models04, acmtfr_models05, acmtfr_models06,
-                  acmtfr_models07, acmtfr_models08, acmtfr_models09, acmtfr_models10)
-
-  result = lapply(ACMTFR_models, FUN = function(x) {modelEvaluation(x$Fac, inputLoadings, x$Fac[[8]])})
-  
-  df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
-  colnames(df) = c(paste0("C", 1:8), "Overall")
-  
-  threshold = df %>% mutate(pi=pis) %>% filter(pi==1) %>% select(C4) %>% pull() %>% max()
-  FMSdelta[i] = (df %>% mutate(pi=pis) %>% filter(pi!=1) %>% select(C4) %>% pull() %>% max()) - threshold
-  
-  a = df %>% mutate(pi=pis) %>% pivot_longer(-pi) %>% filter(name=="C4") %>% ggplot(aes(x=value,col=as.factor(pi))) + stat_ecdf() + geom_vline(xintercept=threshold, col="red", linetype="dashed", size=1.5) + xlab("FMS of the hidden local component") + ylab("ECDF(FMS)") + labs(col=expression(pi)) + ggtitle(noiseOnX)
-  
-  b= df %>% mutate(C1 = C1 > threshold, C2 = C2 > threshold, C3 = C3 > threshold, C4 = C4 > threshold, C5 = C5 > threshold, C6 = C6 > threshold, C7 = C7 > threshold, C8 = C8 > threshold) %>% select(-Overall) %>% mutate(pi=pis) %>% pivot_longer(-pi) %>% filter(name=="C4") %>% ggplot(aes(x=as.factor(pi),fill=value)) + geom_bar(col="black") + xlab(expression(pi)) + ylab("Number of models") + scale_fill_manual(name="FMS improvement", labels=c("No", "Yes"), values=hue_pal()(2)) + ggtitle(noiseOnX)
-  
-  print(ggarrange(a,b,nrow=2,ncol=1))
-}
-```
-```{r FMS delta plot}
-cbind(noises, FMSdelta) %>% as_tibble() %>% ggplot(aes(x=noises,y=FMSdelta)) + geom_point()
+ggarrange(a,b,c,d,e,f,g, nrow=4,ncol=2)
 ```
