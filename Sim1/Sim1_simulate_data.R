@@ -7,7 +7,7 @@ library(ggpubr)
 set.seed(123)
 
 # Settings
-delta = 0.05
+delta = 0.03
 noiseOnX = 0.30
 noiseOnY = 0.05
 

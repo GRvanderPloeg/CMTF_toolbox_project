@@ -86,9 +86,6 @@ for(pi in pis){
       # unfoldedXtest_scl = sweep(unfoldedXtest, 1, stds, FUN="/")
       # Xtest_cnt_scl = rTensor::k_fold(unfoldedXtest_scl, m=2, modes=Xtest@modes)
 
-      Xtrain_final = Xtrain
-      Xtest_final = Xtest
-
     #   if(normalize){
     #     norm = rTensor::fnorm(Xtrain_cnt_scl)
     #     Xtrain_final[[p]] = Xtrain_cnt_scl@data / norm
@@ -98,6 +95,9 @@ for(pi in pis){
     #     Xtest_final[[p]] = Xtest_cnt_scl@data
     #   }
     # }
+
+      Xtrain_final[[p]] = Xtrain@data
+      Xtest_final[[p]] = Xtest@data
     }
 
     Ztrain = setupCMTFdata(Xtrain_final, Z$modes, normalize=FALSE) # do not normalize again
