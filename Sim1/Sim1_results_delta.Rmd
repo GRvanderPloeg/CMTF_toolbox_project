@@ -200,7 +200,8 @@ cbind(what, pis) %>%
   ggplot(aes(x=as.factor(pis),fill=as.factor(V1))) +
   geom_bar(col="black") +
   xlab(expression(pi)) +
-  ylab("Number of models")
+  ylab("Number of models") +
+  labs(fill="Stopping criterion")
 ```
 
 ```{r calculate model metrics}
@@ -227,49 +228,6 @@ LSI_result %>%
 LSI_result %>% ggplot(aes(x=V1)) + facet_wrap(~pi) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
 ```
 
-```{r check RMSECV}
-# p = c(0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
-# RMSE = matrix(NA, nrow=length(p), ncol=10)
-# 
-# for(i in 1:length(p)){
-#   pi = p[i]
-#   CV = readRDS(paste0("./ACMTFR_CV_pi_", pi, ".RDS"))
-#   RMSE[i,] = apply(CV, 2, FUN=function(x){sqrt(sum((x - Y_final)^2)/100)})
-# }
-# 
-# colnames(RMSE) = paste0("model", 1:10)
-# 
-# RMSE %>%
-#   as_tibble() %>%
-#   mutate(pi=p) %>%
-#   pivot_longer(-pi) %>%
-#   ggplot(aes(x=as.factor(pi),y=value)) +
-#   geom_violin(scale="width") +
-#   geom_jitter(width=0.05, size=0.5) +
-#   # stat_summary(fun = median, geom = "point", color = "red", size = 2) +
-#   xlab(expression(pi)) +
-#   ylab("RMSECV")
-# ```
-# ```{r pi versus FMS of C4}
-# df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
-# colnames(df) = c(paste0("C", 1:8), "Overall")
-# 
-# df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
-# 
-# max_pts <- df %>% 
-#     group_by(pi) %>%                 # handle each π separately
-#     slice_min(loss, n = 1, with_ties = FALSE) %>%  # row with lowest loss
-#     ungroup() %>% 
-#     select(pi, C4, loss)        # keep what you need
-# 
-# ggplot(df, aes(x = factor(pi), y = C4)) +
-#     geom_violin(scale = "width") +
-#     geom_jitter(width = 0.05, size = 0.5) +
-#     geom_point(data = max_pts, colour = "red", size = 2) + 
-#     ylim(0, 1) +
-#     labs(x = expression(pi), y = expression(FMS[L13]))
-```
-
 ```{r pi versus FMS of everything}
 df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
 colnames(df) = c(paste0("C", 1:8), "Overall")
@@ -287,8 +245,13 @@ FMS_overall = ggplot(df, aes(x = factor(pi), y = Overall)) +
     geom_jitter(width = 0.05, size = 0.5) +
     geom_point(data = max_pts, colour = "red", size = 2) + 
     ylim(0, 1) +
-    labs(x = expression(pi), y = expression(FMS[overall]))
+    labs(x = expression(pi), y = expression(FMS[overall])) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+df %>% ggplot(aes(x=Overall)) + facet_wrap(~pi) + geom_histogram()
+df %>% mutate(Found = Overall >= 0.75) %>% select(Found, pi) %>% table
 ```
+
 ```{r pi versus FMS of C4}
 df = do.call(rbind, lapply(result, FUN=function(x){c(x$FMS_C1, x$FMS_C2, x$FMS_C3, x$FMS_C4, x$FMS_C5, x$FMS_C6, x$FMS_C7, x$FMS_C8, x$FMS)})) %>% as_tibble() 
 colnames(df) = c(paste0("C", 1:8), "Overall")
@@ -306,7 +269,11 @@ FMS_C4 = ggplot(df, aes(x = factor(pi), y = C4)) +
     geom_jitter(width = 0.05, size = 0.5) +
     geom_point(data = max_pts, colour = "red", size = 2) + 
     ylim(0, 1) +
-    labs(x = expression(pi), y = expression(FMS[L13]))
+    labs(x = expression(pi), y = expression(FMS[L13])) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+df %>% ggplot(aes(x=C4)) + facet_wrap(~pi) + geom_histogram()
+df %>% mutate(Found = C4 >= 0.2) %>% select(Found, pi) %>% table
 ```
 
 ```{r show performance as a bar plot - based on lowest loss}
@@ -345,7 +312,8 @@ A = plottableData %>%
                       guide  = "none") +         # no legend needed
     ylim(0,1) +
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")))
+    ylab(expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|"))) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 B1 = plottableData %>%
     filter(mode == "B1") %>%
@@ -357,7 +325,8 @@ B1 = plottableData %>%
                       guide  = "none") +         # no legend needed
     ylim(0,1) +
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")))
+    ylab(expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|"))) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 C1 = plottableData %>%
     filter(mode == "C1") %>%
@@ -369,7 +338,8 @@ C1 = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")))
+    ylab(expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|"))) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 B3 = plottableData %>%
     filter(mode == "B3") %>%
@@ -381,7 +351,8 @@ B3 = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")))
+    ylab(expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|"))) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 C3 = plottableData %>%
     filter(mode == "C3") %>%
@@ -393,7 +364,8 @@ C3 = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")))
+    ylab(expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|"))) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 A
 B1
@@ -428,7 +400,8 @@ R = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(rho[L13]))
+    ylab(expression(rho[L13])) +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 ```
 
 ```{r everything}
