@@ -155,6 +155,7 @@ deltaTCC_B1 = matrix(NA, nrow=length(deltas), ncol=length(p))
 deltaTCC_C1 = matrix(NA, nrow=length(deltas), ncol=length(p))
 deltaTCC_B3 = matrix(NA, nrow=length(deltas), ncol=length(p))
 deltaTCC_C3 = matrix(NA, nrow=length(deltas), ncol=length(p))
+what = matrix(NA, nrow=1000, ncol=length(deltas))
 
 for(i in 1:length(deltas)){
   
@@ -191,6 +192,7 @@ for(i in 1:length(deltas)){
   colnames(df) = c(paste0("C", 1:8), "Overall")
   
   df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+  what[,i] = sapply(ACMTFR_models, FUN=function(x){x$terminate$what})
   
   FMS_overall[i,] = df %>%
     group_by(pi) %>%

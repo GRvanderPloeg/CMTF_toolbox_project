@@ -153,6 +153,7 @@ deltaTCC_B1 = matrix(NA, nrow=length(deltas), ncol=length(p))
 deltaTCC_C1 = matrix(NA, nrow=length(deltas), ncol=length(p))
 deltaTCC_B3 = matrix(NA, nrow=length(deltas), ncol=length(p))
 deltaTCC_C3 = matrix(NA, nrow=length(deltas), ncol=length(p))
+what = matrix(NA, nrow=1000, ncol=length(deltas))
 
 for(i in 1:length(deltas)){
   
@@ -191,6 +192,7 @@ for(i in 1:length(deltas)){
   colnames(df) = c(paste0("C", 1:8), "Overall")
   
   df = df %>% mutate(pi=pis, loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+  what[,i] = sapply(ACMTFR_models, FUN=function(x){x$terminate$what})
   
   FMS_overall[i,] = df %>%
     group_by(pi) %>%
@@ -407,4 +409,15 @@ g=deltaTCC_C3 %>%
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 ggarrange(a,b,c,d,e,f,g, nrow=4,ncol=2)
+
+colnames(what) = deltas
+what %>%
+  as_tibble() %>%
+  mutate(pi=pis) %>%
+  pivot_longer(-pi) %>% 
+  ggplot(aes(x=as.factor(pi),fill=as.factor(value))) +
+  facet_wrap(~name, nrow=6, ncol=2) +
+  geom_bar(col="black") +
+  labs(x=expression(pi),y="Number of models",fill="Stopping criterion") + 
+  theme(text=element_text(size=16))
 ```
