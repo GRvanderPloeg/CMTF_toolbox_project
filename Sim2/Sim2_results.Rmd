@@ -421,3 +421,183 @@ what %>%
   labs(x=expression(pi),y="Number of models",fill="Stopping criterion") + 
   theme(text=element_text(size=16))
 ```
+
+```{r heatmap plots no delta}
+colnames(FMS_overall) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+a = FMS_overall %>%
+    as_tibble() %>%
+    mutate(delta = deltas) %>%
+    pivot_longer(-delta) %>%
+    ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
+    geom_tile(col = "black") +
+    scale_fill_gradient2(
+        name = expression(FMS[overall]),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )
+    ) +
+    xlab(expression(pi)) +
+    ylab(expression(delta)) +
+    theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+
+colnames(FMS_L13) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+b = FMS_L13 %>%
+    as_tibble() %>%
+    mutate(delta = deltas) %>%
+    pivot_longer(-delta) %>%
+    ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
+    geom_tile(col = "black") +
+    scale_fill_gradient2(
+        name = expression(FMS[13]),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+    xlab(expression(pi)) +
+    ylab(expression(delta)) +
+    theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+colnames(deltaTCC_A) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+c=deltaTCC_A %>%
+  as_tibble() %>%
+  rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  # mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(
+        name=expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+  xlab(expression(pi)) +
+  ylab(expression(delta)) +
+  theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+colnames(deltaTCC_B1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+d=deltaTCC_B1 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  # mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(
+        name=expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+  xlab(expression(pi)) +
+  ylab(expression(delta)) +
+  theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+colnames(deltaTCC_C1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+e=deltaTCC_C1 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  # mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(
+        name=expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+  xlab(expression(pi)) +
+  ylab(expression(delta)) +
+  theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+colnames(deltaTCC_B3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+f=deltaTCC_B3 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  # mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(
+        name=expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+  xlab(expression(pi)) +
+  ylab(expression(delta)) +
+  theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+colnames(deltaTCC_C3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+g=deltaTCC_C3 %>%
+  as_tibble() %>%
+  rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
+  mutate(delta=deltas) %>% 
+  pivot_longer(-delta) %>%
+  # mutate(value = value - value[name==1]) %>%
+  ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
+  geom_tile(col="black") +
+  scale_fill_gradient2(
+        name=expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),
+        low = "#762A83",
+        high = "#1B7837",
+        midpoint = 0.5,
+        limits = c(0, 1),
+        guide = guide_colorbar(
+            title.position = "left",
+            title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
+        )) +
+  xlab(expression(pi)) +
+  ylab(expression(delta)) +
+  theme(legend.direction = "vertical",legend.position = "right") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+
+ggarrange(a,b,c,d,e,f,g, nrow=4,ncol=2)
+```
