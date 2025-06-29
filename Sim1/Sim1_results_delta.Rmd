@@ -213,7 +213,21 @@ LSI_result = do.call(rbind, lapply(result, FUN=function(x){x$LSI}))
 
 LSI_result = LSI_result %>%
   as_tibble() %>%
-  mutate(pi = pis, index = 1:length(pi))
+  mutate(pi = pis, index = 1:length(pi), loss = sapply(ACMTFR_models, FUN=function(x){x$f}))
+
+max_pts <- LSI_result %>% 
+    group_by(pi) %>%                 # handle each π separately
+    slice_min(loss, n = 1, with_ties = FALSE) %>%  # row with lowest loss
+    ungroup() %>% 
+    select(pi, V1, loss)        # keep what you need
+
+ggplot(LSI_result, aes(x = factor(pi), y = V1)) +
+    geom_violin(scale = "width") +
+    geom_jitter(width = 0.05, size = 0.5) +
+    geom_point(data = max_pts, colour = "red", size = 2) + 
+    ylim(0, 1) +
+    labs(x = expression(pi), y = "Lambda Similarity Index") +
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 LSI_result %>%
   ggplot(aes(x = as.factor(pi), y = V1)) +
@@ -225,7 +239,7 @@ LSI_result %>%
   ylim(0,1) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
-LSI_result %>% ggplot(aes(x=V1)) + facet_wrap(~pi) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
+LSI_result %>% ggplot(aes(x=V1)) + facet_wrap(~pi, nrow=4, ncol=3) + geom_histogram() + xlab("Lambda Similarity Index") + ylab("Number of models")
 ```
 
 ```{r pi versus FMS of everything}
@@ -248,7 +262,7 @@ FMS_overall = ggplot(df, aes(x = factor(pi), y = Overall)) +
     labs(x = expression(pi), y = expression(FMS[overall])) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
-df %>% ggplot(aes(x=Overall)) + facet_wrap(~pi) + geom_histogram()
+df %>% ggplot(aes(x=Overall)) + facet_wrap(~pi, nrow=4, ncol=3) + geom_histogram() + xlab(expression(FMS[overall])) + ylab("Number of models")
 df %>% mutate(Found = Overall >= 0.75) %>% select(Found, pi) %>% table
 ```
 
@@ -272,7 +286,7 @@ FMS_C4 = ggplot(df, aes(x = factor(pi), y = C4)) +
     labs(x = expression(pi), y = expression(FMS[L13])) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
-df %>% ggplot(aes(x=C4)) + facet_wrap(~pi) + geom_histogram()
+df %>% ggplot(aes(x=C4)) + facet_wrap(~pi, nrow=4, ncol=3) + geom_histogram() + xlab(expression(FMS[L13])) + ylab("Number of models")
 df %>% mutate(Found = C4 >= 0.2) %>% select(Found, pi) %>% table
 ```
 

@@ -9,7 +9,7 @@ set.seed(123)
 # Settings
 delta = 0.03
 noiseOnX = 0.40
-noises = c(0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999)
+noises = c(1, 2, 3, 4, 5, 10, 50, 100) #c(0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999)
 
 # Import loadings
 inputLoadings = readRDS("./Simulated_data/input_loadings.RDS")

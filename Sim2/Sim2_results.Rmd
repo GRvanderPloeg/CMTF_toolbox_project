@@ -199,7 +199,7 @@ for(i in 1:length(deltas)){
     slice_min(loss, n=1, with_ties=FALSE) %>%
     ungroup() %>%
     select(pi, Overall, loss) %>%
-    mutate(Overall = Overall - Overall[pi==1]) %>%
+    # mutate(Overall = Overall - Overall[pi==1]) %>%
     select(Overall) %>%
     pull()
     
@@ -208,7 +208,7 @@ for(i in 1:length(deltas)){
     slice_min(loss, n=1, with_ties=FALSE) %>%
     ungroup() %>%
     select(pi, C4, loss) %>%
-    mutate(C4 = C4 - C4[pi==1]) %>%
+    # mutate(C4 = C4 - C4[pi==1]) %>%
     select(C4) %>%
     pull()
   
@@ -240,11 +240,11 @@ a = FMS_overall %>%
     ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
     geom_tile(col = "black") +
     scale_fill_gradient2(
-        name = expression(Delta*FMS[overall]),
+        name = expression(FMS[overall]),
         low = "#762A83",
         high = "#1B7837",
-        midpoint = 0,
-        limits = c(-1, 1),
+        midpoint = 0.5,
+        limits = c(0, 1),
         guide = guide_colorbar(
             title.position = "left",
             title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
@@ -264,11 +264,11 @@ b = FMS_L13 %>%
     ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
     geom_tile(col = "black") +
     scale_fill_gradient2(
-        name = expression(Delta*FMS[13]),
+        name = expression(FMS[13]),
         low = "#762A83",
         high = "#1B7837",
-        midpoint = 0,
-        limits = c(-1, 1),
+        midpoint = 0.5,
+        limits = c(0, 1),
         guide = guide_colorbar(
             title.position = "left",
             title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
@@ -281,16 +281,16 @@ b = FMS_L13 %>%
 colnames(deltaTCC_A) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 c=deltaTCC_A %>%
   as_tibble() %>%
-  rowwise() %>%
-  mutate(across(everything(), ~ .x - `1`)) %>%
-  ungroup() %>%
+  # rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  # ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  mutate(value = value - value[name==1]) %>%
+  # mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste(Delta,"|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),
+        name=expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -307,16 +307,16 @@ c=deltaTCC_A %>%
 colnames(deltaTCC_B1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 d=deltaTCC_B1 %>%
   as_tibble() %>%
-  rowwise() %>%
-  mutate(across(everything(), ~ .x - `1`)) %>%
-  ungroup() %>%
+  # rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  # ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  mutate(value = value - value[name==1]) %>%
+  # mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),
+        name=expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -333,16 +333,16 @@ d=deltaTCC_B1 %>%
 colnames(deltaTCC_C1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 e=deltaTCC_C1 %>%
   as_tibble() %>%
-  rowwise() %>%
-  mutate(across(everything(), ~ .x - `1`)) %>%
-  ungroup() %>%
+  # rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  # ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  mutate(value = value - value[name==1]) %>%
+  # mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),
+        name=expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -359,16 +359,16 @@ e=deltaTCC_C1 %>%
 colnames(deltaTCC_B3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 f=deltaTCC_B3 %>%
   as_tibble() %>%
-  rowwise() %>%
-  mutate(across(everything(), ~ .x - `1`)) %>%
-  ungroup() %>%
+  # rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  # ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  mutate(value = value - value[name==1]) %>%
+  # mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste(Delta,"|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),
+        name=expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -385,16 +385,16 @@ f=deltaTCC_B3 %>%
 colnames(deltaTCC_C3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 g=deltaTCC_C3 %>%
   as_tibble() %>%
-  rowwise() %>%
-  mutate(across(everything(), ~ .x - `1`)) %>%
-  ungroup() %>%
+  # rowwise() %>%
+  # mutate(across(everything(), ~ .x - `1`)) %>%
+  # ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  mutate(value = value - value[name==1]) %>%
+  # mutate(value = value - value[name==1]) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste(Delta,"|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),
+        name=expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
