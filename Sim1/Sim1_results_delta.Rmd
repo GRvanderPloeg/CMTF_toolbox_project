@@ -143,10 +143,10 @@ inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
 delta = 0.03
 
 # Load data
-X1_final = readRDS(paste0("../Sim2/Sim2_X1_", delta, ".RDS"))
-X2_final = readRDS(paste0("../Sim2/Sim2_X2_", delta, ".RDS"))
-X3_final = readRDS(paste0("../Sim2/Sim2_X3_", delta, ".RDS"))
-Y_final = as.matrix(readRDS("../Sim2/Sim2_Y.RDS"))
+X1_final = readRDS(paste0("../Sim2/20250619_run/Sim2_X1_", delta, ".RDS"))
+X2_final = readRDS(paste0("../Sim2/20250619_run/Sim2_X2_", delta, ".RDS"))
+X3_final = readRDS(paste0("../Sim2/20250619_run/Sim2_X3_", delta, ".RDS"))
+Y_final = as.matrix(readRDS("../Sim2/20250619_run/Sim2_Y.RDS"))
 
 # Process data
 datasets = list(X1_final, X2_final, X3_final)
@@ -171,16 +171,16 @@ norms = Z$norms
 # Modeling results
 
 ```{r load all models}
-acmtfr_models01 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_01_", delta, ".RDS"))
-acmtfr_models02 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_02_", delta, ".RDS"))
-acmtfr_models03 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_03_", delta, ".RDS"))
-acmtfr_models04 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_04_", delta, ".RDS"))
-acmtfr_models05 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_05_", delta, ".RDS"))
-acmtfr_models06 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_06_", delta, ".RDS"))
-acmtfr_models07 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_07_", delta, ".RDS"))
-acmtfr_models08 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_08_", delta, ".RDS"))
-acmtfr_models09 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_09_", delta, ".RDS"))
-acmtfr_models10 = readRDS(paste0("../Sim2/Sim2_ACMTFR_model_10_", delta, ".RDS"))
+acmtfr_models01 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_01_", delta, ".RDS"))
+acmtfr_models02 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_02_", delta, ".RDS"))
+acmtfr_models03 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_03_", delta, ".RDS"))
+acmtfr_models04 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_04_", delta, ".RDS"))
+acmtfr_models05 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_05_", delta, ".RDS"))
+acmtfr_models06 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_06_", delta, ".RDS"))
+acmtfr_models07 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_07_", delta, ".RDS"))
+acmtfr_models08 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_08_", delta, ".RDS"))
+acmtfr_models09 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_09_", delta, ".RDS"))
+acmtfr_models10 = readRDS(paste0("../Sim2/20250619_run/Sim2_ACMTFR_model_10_", delta, ".RDS"))
 ```
 
 ```{r combine them all together}
@@ -326,7 +326,7 @@ A = plottableData %>%
                       guide  = "none") +         # no legend needed
     ylim(0,1) +
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|"))) +
+    ylab(expression(paste("|",phi(bold(a)[L13],tilde(bold(a))[L13]),"|"))) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 B1 = plottableData %>%
@@ -339,7 +339,7 @@ B1 = plottableData %>%
                       guide  = "none") +         # no legend needed
     ylim(0,1) +
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|"))) +
+    ylab(expression(paste("|",phi(bold(b)[L13]^{(1)},tilde(bold(b))[L13]^{(1)}),"|"))) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 C1 = plottableData %>%
@@ -352,7 +352,7 @@ C1 = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|"))) +
+    ylab(expression(paste("|",phi(bold(c)[L13]^{(1)},tilde(bold(c))[L13]^{(1)}),"|"))) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 B3 = plottableData %>%
@@ -365,7 +365,7 @@ B3 = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|"))) +
+    ylab(expression(paste("|",phi(bold(b)[L13]^{(3)},tilde(bold(b))[L13]^{(3)}),"|"))) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 C3 = plottableData %>%
@@ -378,7 +378,7 @@ C3 = plottableData %>%
                                  `FALSE` = "#474F58"),
                       guide  = "none") +         # no legend needed
     xlab(expression(pi)) +
-    ylab(expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|"))) +
+    ylab(expression(paste("|",phi(bold(c)[L13]^{(3)},tilde(bold(c))[L13]^{(3)}),"|"))) +
     scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
 
 A

@@ -103,41 +103,41 @@ Z = setupCMTFdata(datasets, modes, normalize=TRUE)
 ```
 
 ```{r check best pi}
-CV_pi_models = readRDS("./CV_BMI_pi_models.RDS")
-pis = c(0.2, 0.5, 0.6, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.875, 0.9, 1)
-
-repaired_CV_pi_models = list()
-for(i in 1:length(pis)){
-  models = CV_pi_models[[i]]
-  loss = do.call(rbind, lapply(models, FUN=function(x){x$f}))
-  index = which(loss == min(loss))
-  repaired_CV_pi_models[[i]] = models[[index]]
-}
-
-varExpsY = do.call(rbind, lapply(repaired_CV_pi_models, FUN=function(x){x$varExpY}))
-df = cbind(varExpsY, pis)
-colnames(df) = c("varExpY", "pi")
-df = df %>% as_tibble() %>% mutate(numComponents=1)
-
-CV_pi_models2 = readRDS("./CV_BMI_pi_models2.RDS")
-pis2 = c(0.25, 0.5, 0.75, 0.875, 0.88, 0.885, 0.89, 0.895, 0.9, 0.905, 0.91, 0.915, 0.92, 0.925, 0.95, 0.975, 1)
-
-varExpsY2 = do.call(rbind, lapply(CV_pi_models2, FUN=function(x){x$varExpY}))
-df2 = cbind(varExpsY2, pis2) %>% as_tibble()
-colnames(df2) = c("varExpY", "pi")
-df2 = df2 %>% mutate(numComponents=2)
-
-df = rbind(df, df2)
-
-df %>% ggplot(aes(x=pi,y=varExpY,col=as.factor(numComponents))) + geom_line() + geom_point() + xlab(expression(pi)) + ylab("Variance explained in Y (%)") + guides(color=guide_legend(title="Number of components")) + theme(legend.position="top")
+# CV_pi_models = readRDS("./CV_BMI_pi_models.RDS")
+# pis = c(0.2, 0.5, 0.6, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.875, 0.9, 1)
+# 
+# repaired_CV_pi_models = list()
+# for(i in 1:length(pis)){
+#   models = CV_pi_models[[i]]
+#   loss = do.call(rbind, lapply(models, FUN=function(x){x$f}))
+#   index = which(loss == min(loss))
+#   repaired_CV_pi_models[[i]] = models[[index]]
+# }
+# 
+# varExpsY = do.call(rbind, lapply(repaired_CV_pi_models, FUN=function(x){x$varExpY}))
+# df = cbind(varExpsY, pis)
+# colnames(df) = c("varExpY", "pi")
+# df = df %>% as_tibble() %>% mutate(numComponents=1)
+# 
+# CV_pi_models2 = readRDS("./CV_BMI_pi_models2.RDS")
+# pis2 = c(0.25, 0.5, 0.75, 0.875, 0.88, 0.885, 0.89, 0.895, 0.9, 0.905, 0.91, 0.915, 0.92, 0.925, 0.95, 0.975, 1)
+# 
+# varExpsY2 = do.call(rbind, lapply(CV_pi_models2, FUN=function(x){x$varExpY}))
+# df2 = cbind(varExpsY2, pis2) %>% as_tibble()
+# colnames(df2) = c("varExpY", "pi")
+# df2 = df2 %>% mutate(numComponents=2)
+# 
+# df = rbind(df, df2)
+# 
+# df %>% ggplot(aes(x=pi,y=varExpY,col=as.factor(numComponents))) + geom_line() + geom_point() + xlab(expression(pi)) + ylab("Variance explained in Y (%)") + guides(color=guide_legend(title="Number of components")) + theme(legend.position="top")
 
 ```
 
 ```{r check CV}
-BMI1_small = readRDS("./CV_small_BMI_0.8.RDS")
-BMI2_small = readRDS("./CV_small_BMI_0.85.RDS")
-BMI3_small = readRDS("./CV_small_BMI_0.9.RDS")
-BMI4_small = readRDS("./CV_small_BMI_0.95.RDS")
+# BMI1_small = readRDS("./CV_small_BMI_0.8.RDS")
+# BMI2_small = readRDS("./CV_small_BMI_0.85.RDS")
+# BMI3_small = readRDS("./CV_small_BMI_0.9.RDS")
+# BMI4_small = readRDS("./CV_small_BMI_0.95.RDS")
 
 # investigateFMS(lapply(Jakobsen2025$Z$object, FUN=function(x){x@data}), Jakobsen2025$Z$modes, sharedMode=1, numCores=16, method="L-BFGS")
 ```
@@ -193,10 +193,10 @@ plotCV_old = function(result){
   ggarrange(a,b)
 }
 
-plotCV(BMI1_small)
-plotCV(BMI2_small)
-plotCV(BMI3_small)
-plotCV(BMI4_small)
+# plotCV(BMI1_small)
+# plotCV(BMI2_small)
+# plotCV(BMI3_small)
+# plotCV(BMI4_small)
 # plotCV(BMI5_small)
 # plotCV(BMI6_small)
 # plotCV(BMI7_small)

@@ -144,7 +144,7 @@ pis = rep(p, each=100)
 inputLoadings = readRDS("../Simulated_data/input_loadings.RDS")
 
 # Load data
-Y_final = as.matrix(readRDS("./Sim2_Y.RDS"))
+Y_final = as.matrix(readRDS("./20250619_run/Sim2_Y.RDS"))
 
 FMS_overall = matrix(NA, nrow=length(deltas), ncol=10)
 FMS_L13 = matrix(NA, nrow=length(deltas), ncol=10)
@@ -160,9 +160,9 @@ for(i in 1:length(deltas)){
   delta = deltas[i]
   
   # Load data
-  X1_final = readRDS(paste0("./Sim2_X1_", delta, ".RDS"))
-  X2_final = readRDS(paste0("./Sim2_X2_", delta, ".RDS"))
-  X3_final = readRDS(paste0("./Sim2_X3_", delta, ".RDS"))
+  X1_final = readRDS(paste0("./20250619_run/Sim2_X1_", delta, ".RDS"))
+  X2_final = readRDS(paste0("./20250619_run/Sim2_X2_", delta, ".RDS"))
+  X3_final = readRDS(paste0("./20250619_run/Sim2_X3_", delta, ".RDS"))
 
   # Process data
   datasets = list(X1_final, X2_final, X3_final)
@@ -171,16 +171,16 @@ for(i in 1:length(deltas)){
   norms = Z$norms
   
   # Load models
-  acmtfr_models01 = readRDS(paste0("./Sim2_ACMTFR_model_01_", delta, ".RDS"))
-  acmtfr_models02 = readRDS(paste0("./Sim2_ACMTFR_model_02_", delta, ".RDS"))
-  acmtfr_models03 = readRDS(paste0("./Sim2_ACMTFR_model_03_", delta, ".RDS"))
-  acmtfr_models04 = readRDS(paste0("./Sim2_ACMTFR_model_04_", delta, ".RDS"))
-  acmtfr_models05 = readRDS(paste0("./Sim2_ACMTFR_model_05_", delta, ".RDS"))
-  acmtfr_models06 = readRDS(paste0("./Sim2_ACMTFR_model_06_", delta, ".RDS"))
-  acmtfr_models07 = readRDS(paste0("./Sim2_ACMTFR_model_07_", delta, ".RDS"))
-  acmtfr_models08 = readRDS(paste0("./Sim2_ACMTFR_model_08_", delta, ".RDS"))
-  acmtfr_models09 = readRDS(paste0("./Sim2_ACMTFR_model_09_", delta, ".RDS"))
-  acmtfr_models10 = readRDS(paste0("./Sim2_ACMTFR_model_10_", delta, ".RDS"))
+  acmtfr_models01 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_01_", delta, ".RDS"))
+  acmtfr_models02 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_02_", delta, ".RDS"))
+  acmtfr_models03 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_03_", delta, ".RDS"))
+  acmtfr_models04 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_04_", delta, ".RDS"))
+  acmtfr_models05 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_05_", delta, ".RDS"))
+  acmtfr_models06 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_06_", delta, ".RDS"))
+  acmtfr_models07 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_07_", delta, ".RDS"))
+  acmtfr_models08 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_08_", delta, ".RDS"))
+  acmtfr_models09 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_09_", delta, ".RDS"))
+  acmtfr_models10 = readRDS(paste0("./20250619_run/Sim2_ACMTFR_model_10_", delta, ".RDS"))
   
   ACMTFR_models = c(acmtfr_models01, acmtfr_models02, acmtfr_models03,
                   acmtfr_models04, acmtfr_models05, acmtfr_models06,
@@ -199,7 +199,7 @@ for(i in 1:length(deltas)){
     slice_min(loss, n=1, with_ties=FALSE) %>%
     ungroup() %>%
     select(pi, Overall, loss) %>%
-    # mutate(Overall = Overall - Overall[pi==1]) %>%
+    mutate(Overall = Overall - Overall[pi==1]) %>%
     select(Overall) %>%
     pull()
     
@@ -208,7 +208,7 @@ for(i in 1:length(deltas)){
     slice_min(loss, n=1, with_ties=FALSE) %>%
     ungroup() %>%
     select(pi, C4, loss) %>%
-    # mutate(C4 = C4 - C4[pi==1]) %>%
+    mutate(C4 = C4 - C4[pi==1]) %>%
     select(C4) %>%
     pull()
   
@@ -237,14 +237,15 @@ a = FMS_overall %>%
     as_tibble() %>%
     mutate(delta = deltas) %>%
     pivot_longer(-delta) %>%
+    filter(name != 1) %>%
     ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
     geom_tile(col = "black") +
     scale_fill_gradient2(
         name = expression(FMS[overall]),
         low = "#762A83",
         high = "#1B7837",
-        midpoint = 0.5,
-        limits = c(0, 1),
+        midpoint = 0,
+        limits = c(-1, 1),
         guide = guide_colorbar(
             title.position = "left",
             title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
@@ -253,7 +254,7 @@ a = FMS_overall %>%
     xlab(expression(pi)) +
     ylab(expression(delta)) +
     theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 
 colnames(FMS_L13) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
@@ -261,14 +262,15 @@ b = FMS_L13 %>%
     as_tibble() %>%
     mutate(delta = deltas) %>%
     pivot_longer(-delta) %>%
+    filter(name != 1) %>%
     ggplot(aes(x = as.factor(name), y = as.factor(delta), fill = value)) +
     geom_tile(col = "black") +
     scale_fill_gradient2(
         name = expression(FMS[13]),
         low = "#762A83",
         high = "#1B7837",
-        midpoint = 0.5,
-        limits = c(0, 1),
+        midpoint = 0,
+        limits = c(-1, 1),
         guide = guide_colorbar(
             title.position = "left",
             title.theme = element_text(angle = 90, vjust = 1, hjust = 0.5)
@@ -276,21 +278,22 @@ b = FMS_L13 %>%
     xlab(expression(pi)) +
     ylab(expression(delta)) +
     theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 colnames(deltaTCC_A) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 c=deltaTCC_A %>%
   as_tibble() %>%
-  # rowwise() %>%
-  # mutate(across(everything(), ~ .x - `1`)) %>%
-  # ungroup() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  # mutate(value = value - value[name==1]) %>%
+  mutate(value = value - value[name==1]) %>%
+  filter(name != 1) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste("|",phi(bold(a)[L13],hat(bold(a))[L13]),"|")),
+        name=expression(paste("|",phi(bold(a)[L13],tilde(bold(a))[L13]),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -302,21 +305,22 @@ c=deltaTCC_A %>%
   xlab(expression(pi)) +
   ylab(expression(delta)) +
   theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 colnames(deltaTCC_B1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 d=deltaTCC_B1 %>%
   as_tibble() %>%
-  # rowwise() %>%
-  # mutate(across(everything(), ~ .x - `1`)) %>%
-  # ungroup() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  # mutate(value = value - value[name==1]) %>%
+  mutate(value = value - value[name==1]) %>%
+  filter(name != 1) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste("|",phi(bold(b)[L13]^{(1)},hat(bold(b))[L13]^{(1)}),"|")),
+        name=expression(paste("|",phi(bold(b)[L13]^{(1)},tilde(bold(b))[L13]^{(1)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -328,21 +332,22 @@ d=deltaTCC_B1 %>%
   xlab(expression(pi)) +
   ylab(expression(delta)) +
   theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+  scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 colnames(deltaTCC_C1) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 e=deltaTCC_C1 %>%
   as_tibble() %>%
-  # rowwise() %>%
-  # mutate(across(everything(), ~ .x - `1`)) %>%
-  # ungroup() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  # mutate(value = value - value[name==1]) %>%
+  mutate(value = value - value[name==1]) %>%
+  filter(name != 1) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste("|",phi(bold(c)[L13]^{(1)},hat(bold(c))[L13]^{(1)}),"|")),
+        name=expression(paste("|",phi(bold(c)[L13]^{(1)},tilde(bold(c))[L13]^{(1)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -354,21 +359,22 @@ e=deltaTCC_C1 %>%
   xlab(expression(pi)) +
   ylab(expression(delta)) +
   theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 colnames(deltaTCC_B3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 f=deltaTCC_B3 %>%
   as_tibble() %>%
-  # rowwise() %>%
-  # mutate(across(everything(), ~ .x - `1`)) %>%
-  # ungroup() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  # mutate(value = value - value[name==1]) %>%
+  mutate(value = value - value[name==1]) %>%
+  filter(name != 1) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste("|",phi(bold(b)[L13]^{(3)},hat(bold(b))[L13]^{(3)}),"|")),
+        name=expression(paste("|",phi(bold(b)[L13]^{(3)},tilde(bold(b))[L13]^{(3)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -380,21 +386,22 @@ f=deltaTCC_B3 %>%
   xlab(expression(pi)) +
   ylab(expression(delta)) +
   theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 colnames(deltaTCC_C3) = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 g=deltaTCC_C3 %>%
   as_tibble() %>%
-  # rowwise() %>%
-  # mutate(across(everything(), ~ .x - `1`)) %>%
-  # ungroup() %>%
+  rowwise() %>%
+  mutate(across(everything(), ~ .x - `1`)) %>%
+  ungroup() %>%
   mutate(delta=deltas) %>% 
   pivot_longer(-delta) %>%
-  # mutate(value = value - value[name==1]) %>%
+  mutate(value = value - value[name==1]) %>%
+  filter(name != 1) %>%
   ggplot(aes(x=as.factor(name),y=as.factor(delta),fill=value)) +
   geom_tile(col="black") +
   scale_fill_gradient2(
-        name=expression(paste("|",phi(bold(c)[L13]^{(3)},hat(bold(c))[L13]^{(3)}),"|")),
+        name=expression(paste("|",phi(bold(c)[L13]^{(3)},tilde(bold(c))[L13]^{(3)}),"|")),
         low = "#762A83",
         high = "#1B7837",
         midpoint = 0,
@@ -406,7 +413,7 @@ g=deltaTCC_C3 %>%
   xlab(expression(pi)) +
   ylab(expression(delta)) +
   theme(legend.direction = "vertical",legend.position = "right") +
-    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "ACMTF"))
+    scale_x_discrete(labels=c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
 
 ggarrange(a,b,c,d,e,f,g, nrow=4,ncol=2)
 
